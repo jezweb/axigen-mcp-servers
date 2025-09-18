@@ -6,7 +6,7 @@ MCP server for Axigen email operations, providing comprehensive email management
 
 ## Features
 
-This server provides 18 working tools for email operations on ax.email:
+This server provides 20 working tools for email operations on ax.email:
 
 ### Email Reading & Search
 - `list_emails` - List emails with pagination and sorting (**requires folder_id**)
@@ -14,6 +14,7 @@ This server provides 18 working tools for email operations on ax.email:
 - `get_email` - Get full email details
 - `get_email_body` - Get email body (automatically decodes base64)
 - `get_email_headers` - Get email headers
+- `get_email_source` - Get raw email source (suitable for saving as .eml file)
 
 ### Email Composition & Sending
 - `create_draft` - Create a new draft email
@@ -32,6 +33,8 @@ This server provides 18 working tools for email operations on ax.email:
 ### Attachments & Folders
 - `get_email_attachments` - List email attachments
 - `list_folders` - List email folders with unread counts
+- `create_folder` - Create new email folder
+- `delete_folder` - Delete empty folder
 - `get_common_folder_ids` - Helper to get IDs for Inbox, Sent, Drafts, etc.
 
 ## Installation
@@ -169,6 +172,9 @@ When using with ax.email (the default server):
 - ❌ **Scheduled send** operations not available
 - ❌ **Undo send** not available
 - ❌ **Temporary attachments** not available
+- ❌ **Label operations** not working (400 errors)
+- ❌ **Folder update/move** not available
+- ❌ **Message parts** endpoints return unexpected format
 
 ## Notes
 

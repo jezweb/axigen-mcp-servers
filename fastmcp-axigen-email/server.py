@@ -691,6 +691,78 @@ async def mark_as_spam(
 # @mcp.tool()
 # async def mark_as_not_spam(...)
 
+# Note: Label operations are not working on ax.email
+# The endpoints exist but return 400 Bad Parameter errors
+# @mcp.tool()
+# async def add_label(...)
+# @mcp.tool()
+# async def remove_label(...)
+
+@mcp.tool()
+async def get_email_source(
+    email: str,
+    password: str,
+    mail_id: str,
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    Get the raw source of an email (as text, suitable for saving as .eml).
+
+    Args:
+        email: User email for authentication
+        password: User password
+        mail_id: The email ID
+        server_url: Axigen server URL (default: https://ax.email)
+
+    Returns:
+        Raw email source including headers and body
+    """
+    result = await quick_request(
+        email, password, server_url,
+        "GET", f"mails/{mail_id}/source"
+    )
+
+    # Check for raw_response field (ax.email format)
+    if result.get("raw_response"):
+        return {
+            "success": True,
+            "source": result["raw_response"],
+            "message": "Email source retrieved. You can save this as a .eml file."
+        }
+
+    if isinstance(result, str):
+        return {
+            "success": True,
+            "source": result,
+            "message": "Email source retrieved. You can save this as a .eml file."
+        }
+
+    # If it returns data field with base64
+    if result.get("data"):
+        import base64
+        try:
+            decoded = base64.b64decode(result["data"]).decode('utf-8')
+            return {
+                "success": True,
+                "source": decoded,
+                "message": "Email source retrieved and decoded."
+            }
+        except:
+            return {
+                "success": True,
+                "source": result["data"],
+                "message": "Email source retrieved (base64 encoded)."
+            }
+
+    return result
+
+# Note: Message parts operations don't work as expected on ax.email
+# The /parts endpoint returns the full message structure, not a list of parts
+# @mcp.tool()
+# async def list_message_parts(...)
+# @mcp.tool()
+# async def get_message_part(...)
+
 # Attachment Tools
 
 @mcp.tool()
