@@ -8,6 +8,7 @@ from fastmcp import FastMCP
 from typing import Dict, Any, Optional, List
 from src.utils import quick_request, format_email_list, parse_email_addresses
 import json
+import base64
 
 mcp = FastMCP("Axigen Email Server")
 
@@ -17,7 +18,7 @@ mcp = FastMCP("Axigen Email Server")
 async def list_emails(
     email: str,
     password: str,
-    folder_id: Optional[str] = None,
+    folder_id: str,
     start: Optional[int] = 0,
     limit: Optional[int] = 50,
     sort: Optional[str] = "date",
@@ -25,12 +26,12 @@ async def list_emails(
     server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
-    List emails from a mailbox.
+    List emails from a specific folder.
 
     Args:
         email: User email for authentication
         password: User password
-        folder_id: Specific folder ID to list from (optional, defaults to all)
+        folder_id: Folder ID to list from (required - use list_folders to get IDs)
         start: Starting position for pagination (default: 0)
         limit: Number of emails to return (default: 50, max: 500)
         sort: Sort field - "date", "from", "subject", "size" (default: "date")
@@ -41,14 +42,12 @@ async def list_emails(
         List of emails with metadata
     """
     params = {
+        "folderId": folder_id,
         "start": start,
         "limit": min(limit, 500),
         "sort": sort,
         "dir": sort_dir
     }
-
-    if folder_id:
-        params["folderId"] = folder_id
 
     result = await quick_request(
         email, password, server_url,
@@ -69,58 +68,18 @@ async def list_emails(
 
     return result
 
-@mcp.tool()
-async def search_emails(
-    email: str,
-    password: str,
-    query: str,
-    folder_ids: Optional[List[str]] = None,
-    start: Optional[int] = 0,
-    limit: Optional[int] = 50,
-    server_url: str = "https://ax.email"
-) -> Dict[str, Any]:
-    """
-    Search emails using Axigen search syntax.
-
-    Args:
-        email: User email for authentication
-        password: User password
-        query: Search query (supports: from:email, to:email, subject:text, body:text, etc.)
-        folder_ids: List of folder IDs to search in (optional)
-        start: Starting position for pagination (default: 0)
-        limit: Number of results to return (default: 50)
-        server_url: Axigen server URL (default: https://ax.email)
-
-    Returns:
-        Search results with matching emails
-    """
-    search_data = {
-        "query": [{"criteria": query}],
-        "start": start,
-        "limit": limit
-    }
-
-    if folder_ids:
-        search_data["folderIds"] = folder_ids
-
-    result = await quick_request(
-        email, password, server_url,
-        "POST", "mails/search",
-        data=search_data
-    )
-
-    if result.get("success") and result.get("data"):
-        data = result["data"]
-        emails = data.get("items", [])
-        formatted = format_email_list(emails)
-        return {
-            "success": True,
-            "total": data.get("total", len(emails)),
-            "emails": emails,
-            "formatted": formatted
-        }
-
-    return result
+# Note: search_emails is currently disabled as the query format for ax.email is unknown
+# The endpoint exists but requires a specific query structure that hasn't been documented
+# @mcp.tool()
+# async def search_emails(...):
+#     """
+#     Search emails - CURRENTLY UNSUPPORTED on ax.email
+#     The endpoint exists but the query format is unknown.
+#     """
+#     return {
+#         "success": False,
+#         "error": "Search is currently unsupported. Use list_emails with specific folder IDs instead."
+#     }
 
 @mcp.tool()
 async def get_email(
@@ -177,17 +136,31 @@ async def get_email_body(
         server_url: Axigen server URL (default: https://ax.email)
 
     Returns:
-        Email body content in requested format
+        Email body content in requested format (decoded from base64)
     """
     params = {}
     if format != "both":
         params["format"] = format
 
-    return await quick_request(
+    result = await quick_request(
         email, password, server_url,
         "GET", f"mails/{mail_id}/body",
         params=params
     )
+
+    # Decode base64 encoded body if present
+    if isinstance(result, dict) and result.get("data"):
+        try:
+            decoded_body = base64.b64decode(result["data"]).decode('utf-8')
+            result["bodyText"] = decoded_body
+            result["decoded"] = True
+            # Keep original base64 data too
+            result["dataBase64"] = result["data"]
+            del result["data"]  # Remove to avoid confusion
+        except Exception as e:
+            result["decodeError"] = str(e)
+
+    return result
 
 # Email Composition and Sending Tools
 
@@ -471,7 +444,7 @@ async def move_email(
         Move operation status
     """
     move_data = {
-        "folderId": folder_id
+        "destinationFolderId": folder_id
     }
 
     result = await quick_request(
@@ -681,16 +654,16 @@ async def get_email_headers(
 async def list_folders(
     email: str,
     password: str,
-    folder_type: str = "all",
+    folder_type: str = "mails",
     server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
-    List email folders.
+    List email folders with their IDs.
 
     Args:
         email: User email for authentication
         password: User password
-        folder_type: Type of folders - "all", "mails", "events", "tasks", "notes", "contacts" (default: "all")
+        folder_type: Type of folders - "all", "mails", "events", "tasks", "notes", "contacts" (default: "mails")
         server_url: Axigen server URL (default: https://ax.email)
 
     Returns:
@@ -706,22 +679,93 @@ async def list_folders(
         params=params
     )
 
-    if result.get("success") and result.get("data"):
-        folders = result["data"].get("items", [])
+    if "items" in result:
+        folders = result["items"]
         formatted = []
+        common_folders = {}
+
         for folder in folders:
             name = folder.get("name", "unknown")
             folder_id = folder.get("id", "")
-            count = folder.get("unreadCount", 0)
-            formatted.append(f"- {name} (ID: {folder_id}, Unread: {count})")
+            unread = folder.get("unreadCount", 0)
+            total = folder.get("totalCount", 0)
+            formatted.append(f"- {name} (ID: {folder_id}, Unread: {unread}/{total})")
+
+            # Track common folder names
+            name_lower = name.lower()
+            if name_lower in ["inbox", "sent", "drafts", "trash", "spam", "archive"]:
+                common_folders[name_lower] = folder_id
 
         return {
             "success": True,
             "folders": folders,
-            "formatted": "\n".join(formatted) if formatted else "No folders found"
+            "common_folders": common_folders,
+            "formatted": "\n".join(formatted) if formatted else "No folders found",
+            "message": "Use the folder ID with list_emails to see messages in that folder"
         }
 
     return result
+
+@mcp.tool()
+async def get_common_folder_ids(
+    email: str,
+    password: str,
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    Get IDs for common folders (Inbox, Sent, Drafts, etc.).
+
+    Args:
+        email: User email for authentication
+        password: User password
+        server_url: Axigen server URL (default: https://ax.email)
+
+    Returns:
+        Dictionary with common folder names and their IDs
+    """
+    result = await quick_request(
+        email, password, server_url,
+        "GET", "folders",
+        params={"type": "mails"}
+    )
+
+    if "items" in result:
+        folders = result["items"]
+        common_folders = {}
+
+        for folder in folders:
+            name = folder.get("name", "")
+            folder_id = folder.get("id", "")
+            name_lower = name.lower()
+
+            # Map common folder names
+            if name_lower == "inbox":
+                common_folders["inbox"] = folder_id
+            elif name_lower == "sent":
+                common_folders["sent"] = folder_id
+            elif name_lower == "drafts":
+                common_folders["drafts"] = folder_id
+            elif name_lower == "trash":
+                common_folders["trash"] = folder_id
+            elif name_lower == "spam":
+                common_folders["spam"] = folder_id
+            elif name_lower == "archive":
+                common_folders["archive"] = folder_id
+            elif name_lower == "flagged":
+                common_folders["flagged"] = folder_id
+
+        return {
+            "success": True,
+            "folders": common_folders,
+            "message": f"Found {len(common_folders)} common folders. Use these IDs with list_emails.",
+            "example": f"To list inbox emails, use folder_id='{common_folders.get('inbox', 'not_found')}'"
+        }
+
+    return {
+        "success": False,
+        "error": "Could not retrieve folders",
+        "data": result
+    }
 
 if __name__ == "__main__":
     mcp.run()

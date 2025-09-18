@@ -2,18 +2,18 @@
 
 MCP server for Axigen email operations, providing comprehensive email management through the Axigen REST API.
 
-⚠️ **IMPORTANT**: This server requires a full Axigen installation with the **Mailbox API** enabled. It will **NOT** work with ax.email or servers that only provide the Account API. The authentication will succeed, but all email operations will fail with 404 errors on servers without the Mailbox API.
+✅ **UPDATE**: This server has been tested and **DOES work with ax.email**! The Mailbox API is available on ax.email with specific parameter requirements documented below.
 
 ## Features
 
-This server provides 16 tools for email operations:
+This server provides 15 working tools for email operations (search is currently disabled):
 
-### Email Reading & Search
-- `list_emails` - List emails with pagination and sorting
-- `search_emails` - Search emails using Axigen search syntax
+### Email Reading
+- `list_emails` - List emails with pagination and sorting (**requires folder_id**)
 - `get_email` - Get full email details
-- `get_email_body` - Get email body in text/HTML format
+- `get_email_body` - Get email body (automatically decodes base64)
 - `get_email_headers` - Get email headers
+- ~~`search_emails`~~ - Currently disabled (query format unknown for ax.email)
 
 ### Email Composition & Sending
 - `create_draft` - Create a new draft email
@@ -23,14 +23,15 @@ This server provides 16 tools for email operations:
 
 ### Email Management
 - `delete_email` - Delete email (trash or permanent)
-- `move_email` - Move email to another folder
+- `move_email` - Move email to another folder (**uses destinationFolderId**)
 - `update_email_flags` - Mark as read/unread, flagged/unflagged
 - `mark_as_spam` - Mark email as spam
 - `mark_as_not_spam` - Mark email as not spam
 
 ### Attachments & Folders
-- `list_attachments` - List email attachments
+- `get_email_attachments` - List email attachments
 - `list_folders` - List email folders with unread counts
+- `get_common_folder_ids` - Helper to get IDs for Inbox, Sent, Drafts, etc.
 
 ## Installation
 
@@ -58,23 +59,25 @@ Add to your MCP client configuration:
 
 ## Usage Examples
 
+### Get Folder IDs First
+```javascript
+// Get common folder IDs to use with other operations
+await use_tool("get_common_folder_ids", {
+  email: "user@example.com",
+  password: "password"
+});
+// Returns: { inbox: "39_39", sent: "39_40", drafts: "39_41", ... }
+```
+
 ### List Recent Emails
 ```javascript
-// List 20 most recent emails
+// List 20 most recent emails from Inbox
+// Note: folder_id is REQUIRED on ax.email
 await use_tool("list_emails", {
   email: "user@example.com",
   password: "password",
+  folder_id: "39_39",  // Required! Use get_common_folder_ids to find this
   limit: 20
-});
-```
-
-### Search Emails
-```javascript
-// Search for emails from a specific sender
-await use_tool("search_emails", {
-  email: "user@example.com",
-  password: "password",
-  query: "from:john@example.com"
 });
 ```
 
@@ -100,18 +103,18 @@ await use_tool("update_email_flags", {
   is_unread: false
 });
 
-// Move to folder
+// Move to folder (note: uses folder_id parameter)
 await use_tool("move_email", {
   email: "user@example.com",
   password: "password",
   mail_id: "12345",
-  folder_id: "67890"
+  folder_id: "67890"  // This becomes destinationFolderId in the API
 });
 ```
 
 ## Search Query Syntax
 
-The search tool supports various query operators:
+**Note**: Search is currently disabled for ax.email as the query format is unknown. The following operators may work on other Axigen servers:
 - `from:email` - Search by sender
 - `to:email` - Search by recipient
 - `subject:text` - Search in subject
@@ -123,15 +126,22 @@ The search tool supports various query operators:
 ## Requirements
 
 - Axigen server with **Mailbox REST API** enabled (Axigen X4 10.4+)
-  - Must have full Mailbox API with endpoints like `/api/v1/mails`, `/api/v1/folders`
-  - Account-only API servers (like ax.email) are NOT supported
 - Valid email account credentials
 - Network access to Axigen server
 
+## Important Notes for ax.email
+
+When using with ax.email (the default server):
+- ✅ **The Mailbox API IS available** on ax.email
+- ⚠️ **folder_id is required** for `list_emails` - use `get_common_folder_ids` first
+- ⚠️ **Move operations** use `destinationFolderId` internally (handled by the tool)
+- ⚠️ **Email bodies** are base64-encoded (automatically decoded by the tool)
+- ❌ **Search is disabled** - query format unknown for ax.email
+
 ## Notes
 
-- Default server is `https://ax.email` but this will NOT work (ax.email lacks Mailbox API)
-- You must override the server_url parameter with a full Axigen server URL
-- Supports session-based authentication with Basic Auth
+- Default server is `https://ax.email` which now works with proper parameters
+- Supports session-based authentication with Basic Auth fallback
 - Maximum email listing limit is 500 per request
-- For servers with only Account API, use the Settings, Filters, and Security servers instead
+- Email bodies are automatically decoded from base64
+- For account settings, filters, and security operations, use the respective specialized servers
