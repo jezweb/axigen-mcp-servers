@@ -6,7 +6,7 @@ MCP server for Axigen email operations, providing comprehensive email management
 
 ## Features
 
-This server provides 20 working tools for email operations on ax.email:
+This server provides 21 working tools for email operations on ax.email:
 
 ### Email Reading & Search
 - `list_emails` - List emails with pagination and sorting (**requires folder_id**)
@@ -34,6 +34,7 @@ This server provides 20 working tools for email operations on ax.email:
 - `get_email_attachments` - List email attachments
 - `list_folders` - List email folders with unread counts
 - `create_folder` - Create new email folder
+- `update_folder` - Rename/update folder (uses PATCH method)
 - `delete_folder` - Delete empty folder
 - `get_common_folder_ids` - Helper to get IDs for Inbox, Sent, Drafts, etc.
 
@@ -164,16 +165,17 @@ When using with ax.email (the default server):
 - ✅ **Send operations** work for both new emails and drafts
 - ✅ **Spam marking** works (moves to spam folder)
 - ✅ **Update draft** works via PUT (complete replacement)
+- ✅ **Folder update** works via PATCH method (rename folders)
 - ⚠️ **folder_id is required** for `list_emails` - use `get_common_folder_ids` first
 - ⚠️ **Move operations** use `destinationFolderId` internally (handled by the tool)
 - ⚠️ **Email bodies** are base64-encoded (automatically decoded by the tool)
 - ❌ **Unmark spam** doesn't work - move from spam folder instead
 - ❌ **Flagged/attachment search** not supported
-- ❌ **Scheduled send** operations not available
+- ❌ **Scheduled send** operations not available (404 errors)
 - ❌ **Undo send** not available
 - ❌ **Temporary attachments** not available
-- ❌ **Label operations** not working (400 errors)
-- ❌ **Folder update/move** not available
+- ❌ **Label operations** not working (400 Bad Parameter errors)
+- ❌ **Folder move** not available
 - ❌ **Message parts** endpoints return unexpected format
 
 ## Notes
