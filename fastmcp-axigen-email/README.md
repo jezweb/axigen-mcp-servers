@@ -6,27 +6,28 @@ MCP server for Axigen email operations, providing comprehensive email management
 
 ## Features
 
-This server provides 15 working tools for email operations (search is currently disabled):
+This server provides 17 working tools for email operations on ax.email:
 
-### Email Reading
+### Email Reading & Search
 - `list_emails` - List emails with pagination and sorting (**requires folder_id**)
+- `search_emails` - Search emails using field-based queries (text fields: from, to, subject, body; boolean: unread)
 - `get_email` - Get full email details
 - `get_email_body` - Get email body (automatically decodes base64)
 - `get_email_headers` - Get email headers
-- ~~`search_emails`~~ - Currently disabled (query format unknown for ax.email)
 
 ### Email Composition & Sending
 - `create_draft` - Create a new draft email
-- `update_draft` - Update an existing draft
+- ~~`update_draft`~~ - Not supported on ax.email (use delete + create new)
 - `send_email` - Send a new email directly
 - `send_draft` - Send an existing draft
 
 ### Email Management
 - `delete_email` - Delete email (trash or permanent)
 - `move_email` - Move email to another folder (**uses destinationFolderId**)
+- `copy_email` - Copy email to another folder
 - `update_email_flags` - Mark as read/unread, flagged/unflagged
-- `mark_as_spam` - Mark email as spam
-- `mark_as_not_spam` - Mark email as not spam
+- `mark_as_spam` - Mark email as spam (moves to spam folder)
+- ~~`mark_as_not_spam`~~ - Not supported on ax.email
 
 ### Attachments & Folders
 - `get_email_attachments` - List email attachments
@@ -114,14 +115,36 @@ await use_tool("move_email", {
 
 ## Search Query Syntax
 
-**Note**: Search is currently disabled for ax.email as the query format is unknown. The following operators may work on other Axigen servers:
-- `from:email` - Search by sender
-- `to:email` - Search by recipient
-- `subject:text` - Search in subject
-- `body:text` - Search in body
-- `has:attachment` - Emails with attachments
-- `is:unread` - Unread emails
-- `is:flagged` - Flagged emails
+Search uses field-based queries with the following structure:
+```javascript
+search_criteria = [
+  {"field": "fieldname", "value": "searchvalue"},
+  {"field": "fieldname", "value": "searchvalue", "negate": true}  // NOT operator
+]
+```
+
+### Working Search Fields on ax.email:
+- **Text fields**: `from`, `to`, `subject`, `body` - Search for text in these fields
+- **Boolean field**: `unread` - Use `"true"` or `"false"` as value
+
+### Not Supported on ax.email:
+- `flagged` - Returns 400 error
+- `attachment` or `hasAttachment` - Returns 400 error
+
+### Example Searches:
+```javascript
+// Unread emails from a specific sender
+[
+  {"field": "from", "value": "john@example.com"},
+  {"field": "unread", "value": "true"}
+]
+
+// Emails with "meeting" in subject
+[{"field": "subject", "value": "meeting"}]
+
+// NOT from a specific domain
+[{"field": "from", "value": "@spam.com", "negate": true}]
+```
 
 ## Requirements
 
@@ -133,10 +156,16 @@ await use_tool("move_email", {
 
 When using with ax.email (the default server):
 - ✅ **The Mailbox API IS available** on ax.email
+- ✅ **Search works** with text fields (from, to, subject, body) and unread boolean
+- ✅ **Copy email** works with `destinationFolderId`
+- ✅ **Send operations** work for both new emails and drafts
+- ✅ **Spam marking** works (moves to spam folder)
 - ⚠️ **folder_id is required** for `list_emails` - use `get_common_folder_ids` first
 - ⚠️ **Move operations** use `destinationFolderId` internally (handled by the tool)
 - ⚠️ **Email bodies** are base64-encoded (automatically decoded by the tool)
-- ❌ **Search is disabled** - query format unknown for ax.email
+- ❌ **Update draft** doesn't work - delete and recreate instead
+- ❌ **Unmark spam** doesn't work - move from spam folder instead
+- ❌ **Flagged/attachment search** not supported
 
 ## Notes
 
