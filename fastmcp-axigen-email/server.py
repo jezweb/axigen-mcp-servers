@@ -398,11 +398,90 @@ async def send_draft(
 
     return result
 
-# Note: update_draft is not supported on ax.email
-# The PATCH/PUT endpoints for drafts return 400 Bad Parameter error
-# To update a draft on ax.email, delete the old one and create a new one
-# @mcp.tool()
-# async def update_draft(...)
+@mcp.tool()
+async def update_draft(
+    email: str,
+    password: str,
+    draft_id: str,
+    to: str,
+    subject: str,
+    body_text: Optional[str] = None,
+    body_html: Optional[str] = None,
+    from_address: Optional[str] = None,
+    cc: Optional[str] = None,
+    bcc: Optional[str] = None,
+    reply_to: Optional[str] = None,
+    importance: str = "normal",
+    is_unread: bool = True,
+    is_flagged: bool = False,
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    Replace an existing draft email (complete replacement).
+
+    Args:
+        email: User email for authentication
+        password: User password
+        draft_id: The draft email ID to replace
+        to: Recipients (required)
+        subject: Email subject (required)
+        body_text: Plain text body (optional)
+        body_html: HTML body (optional)
+        from_address: From address (optional, defaults to account email)
+        cc: CC recipients (optional)
+        bcc: BCC recipients (optional)
+        reply_to: Reply-To address (optional)
+        importance: "low", "normal", or "high" (default: "normal")
+        is_unread: Unread status (default: True)
+        is_flagged: Flagged status (default: False)
+        server_url: Axigen server URL (default: https://ax.email)
+
+    Returns:
+        Updated draft details
+    """
+    # Build the complete draft replacement data
+    draft_data = {
+        "to": to,
+        "subject": subject,
+        "importance": importance,
+        "isUnread": is_unread,
+        "isFlagged": is_flagged
+    }
+
+    if from_address:
+        draft_data["from"] = from_address
+    if cc:
+        draft_data["cc"] = cc
+    if bcc:
+        draft_data["bcc"] = bcc
+    if reply_to:
+        draft_data["replyTo"] = reply_to
+    if body_text:
+        draft_data["bodyText"] = body_text
+    if body_html:
+        draft_data["bodyHtml"] = body_html
+
+    result = await quick_request(
+        email, password, server_url,
+        "PUT", f"drafts/{draft_id}",
+        data=draft_data
+    )
+
+    if result.get("id"):
+        return {
+            "success": True,
+            "message": "Draft updated successfully",
+            "draft_id": result["id"],
+            "data": result
+        }
+
+    return result
+
+# Note: The following operations are not available on ax.email (404 errors):
+# - scheduled_send, scheduled_send_draft, cancel_scheduled_send
+# - undo_send
+# These may work on full Axigen installations with advanced features enabled
+# Keeping them commented for reference
 
 # Email Management Tools
 
@@ -654,6 +733,11 @@ async def list_attachments(
         }
 
     return result
+
+# Note: Temporary attachment operations are not available on ax.email (404 errors)
+# - create_temp_attachment, get_temp_attachment, delete_temp_attachment
+# These may work on full Axigen installations
+# To send emails with attachments on ax.email, include them inline in the email body
 
 @mcp.tool()
 async def get_email_headers(

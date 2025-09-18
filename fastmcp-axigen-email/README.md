@@ -6,7 +6,7 @@ MCP server for Axigen email operations, providing comprehensive email management
 
 ## Features
 
-This server provides 17 working tools for email operations on ax.email:
+This server provides 18 working tools for email operations on ax.email:
 
 ### Email Reading & Search
 - `list_emails` - List emails with pagination and sorting (**requires folder_id**)
@@ -17,7 +17,7 @@ This server provides 17 working tools for email operations on ax.email:
 
 ### Email Composition & Sending
 - `create_draft` - Create a new draft email
-- ~~`update_draft`~~ - Not supported on ax.email (use delete + create new)
+- `update_draft` - Replace an existing draft (complete replacement via PUT)
 - `send_email` - Send a new email directly
 - `send_draft` - Send an existing draft
 
@@ -160,12 +160,15 @@ When using with ax.email (the default server):
 - ✅ **Copy email** works with `destinationFolderId`
 - ✅ **Send operations** work for both new emails and drafts
 - ✅ **Spam marking** works (moves to spam folder)
+- ✅ **Update draft** works via PUT (complete replacement)
 - ⚠️ **folder_id is required** for `list_emails` - use `get_common_folder_ids` first
 - ⚠️ **Move operations** use `destinationFolderId` internally (handled by the tool)
 - ⚠️ **Email bodies** are base64-encoded (automatically decoded by the tool)
-- ❌ **Update draft** doesn't work - delete and recreate instead
 - ❌ **Unmark spam** doesn't work - move from spam folder instead
 - ❌ **Flagged/attachment search** not supported
+- ❌ **Scheduled send** operations not available
+- ❌ **Undo send** not available
+- ❌ **Temporary attachments** not available
 
 ## Notes
 
