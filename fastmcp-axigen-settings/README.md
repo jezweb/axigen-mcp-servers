@@ -37,19 +37,19 @@ fastmcp run server.py
 
 ## Available Tools
 
-1. **get_signature** - Get primary signature
-2. **update_signature** - Update primary signature
-3. **get_reply_signature** - Get reply signature
-4. **update_reply_signature** - Update reply signature
-5. **get_vacation_settings** - Get vacation/out-of-office settings
-6. **update_vacation_settings** - Update vacation settings
-7. **enable_vacation** - Enable vacation auto-responder
-8. **disable_vacation** - Disable vacation auto-responder
-9. **get_ui_settings** - Get UI preferences
-10. **update_ui_settings** - Update UI preferences
-11. **get_user_info** - Get user contact information
-12. **update_user_info** - Update user contact information
-13. **get_all_settings** - Get all settings at once
+1. **get_account_settings** - Get account preferences (theme, language, timezone, etc.)
+2. **update_account_settings** - Update account preferences
+3. **get_signatures** - List all email signatures
+4. **create_signature** - Create a new signature
+5. **update_signature** - Update an existing signature
+6. **delete_signature** - Delete a signature
+7. **get_vacation_settings** - Get vacation/out-of-office settings
+8. **set_vacation_reply** - Configure vacation auto-reply
+9. **get_contact_info** - Get user contact information
+10. **update_contact_info** - Update user contact information
+11. **get_ui_settings** - Get WebMail UI settings (JSON storage)
+12. **save_ui_settings** - Save WebMail UI settings
+13. **get_account_info** - Get comprehensive account information
 
 ## Authentication
 

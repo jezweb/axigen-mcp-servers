@@ -33,17 +33,17 @@ fastmcp run server.py
 
 ## Available Tools
 
-1. **get_filters** - Get all filter settings
-2. **get_whitelist** - List whitelisted addresses
-3. **add_to_whitelist** - Add address to whitelist
-4. **remove_from_whitelist** - Remove from whitelist
-5. **bulk_add_whitelist** - Add multiple addresses to whitelist
-6. **get_blacklist** - List blacklisted addresses
-7. **add_to_blacklist** - Add address/domain to blacklist
+1. **get_spam_settings** - Get anti-spam (AVAS) filter settings
+2. **update_spam_settings** - Update anti-spam filter settings
+3. **get_whitelist** - List all whitelisted addresses
+4. **add_to_whitelist** - Add an address to whitelist
+5. **remove_from_whitelist** - Remove address from whitelist
+6. **get_blacklist** - List all blacklisted addresses/domains
+7. **add_to_blacklist** - Add address or @domain to blacklist
 8. **remove_from_blacklist** - Remove from blacklist
-9. **bulk_add_blacklist** - Add multiple addresses to blacklist
-10. **bulk_remove_blacklist** - Remove multiple from blacklist
-11. **clear_all_filters** - Clear all whitelist and blacklist entries
+9. **bulk_update_whitelist** - Add/remove multiple whitelist entries
+10. **bulk_update_blacklist** - Add/remove multiple blacklist entries
+11. **get_filter_info** - Get comprehensive filter information
 
 ## Authentication
 
