@@ -499,7 +499,7 @@ async def change_password(
         # Attempt to change password
         result = await quick_request(
             email, password, server_url,
-            "POST", "account/password/change",
+            "POST", "account/password/reset",
             data={
                 "oldPassword": password,
                 "newPassword": new_password,
