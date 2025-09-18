@@ -822,6 +822,93 @@ async def list_folders(
     return result
 
 @mcp.tool()
+async def create_folder(
+    email: str,
+    password: str,
+    name: str,
+    parent_id: Optional[str] = None,
+    folder_type: str = "mails",
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    Create a new email folder.
+
+    Args:
+        email: User email for authentication
+        password: User password
+        name: Name of the new folder
+        parent_id: Parent folder ID (optional, defaults to root)
+        folder_type: Type of folder - "mails" (default: "mails")
+        server_url: Axigen server URL (default: https://ax.email)
+
+    Returns:
+        New folder details
+    """
+    folder_data = {
+        "name": name,
+        "type": folder_type
+    }
+
+    if parent_id:
+        folder_data["parentId"] = parent_id
+
+    result = await quick_request(
+        email, password, server_url,
+        "POST", "folders",
+        data=folder_data
+    )
+
+    if result.get("id"):
+        return {
+            "success": True,
+            "message": f"Folder '{name}' created successfully",
+            "folder_id": result["id"],
+            "data": result
+        }
+
+    return result
+
+# Note: update_folder and move_folder are not available on ax.email (404 errors)
+# These may work on full Axigen installations
+# @mcp.tool()
+# async def update_folder(...)
+
+@mcp.tool()
+async def delete_folder(
+    email: str,
+    password: str,
+    folder_id: str,
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    Delete a folder (must be empty).
+
+    Args:
+        email: User email for authentication
+        password: User password
+        folder_id: The folder ID to delete
+        server_url: Axigen server URL (default: https://ax.email)
+
+    Returns:
+        Deletion status
+    """
+    result = await quick_request(
+        email, password, server_url,
+        "DELETE", f"folders/{folder_id}"
+    )
+
+    if result.get("success"):
+        return {
+            "success": True,
+            "message": "Folder deleted successfully"
+        }
+
+    return result
+
+# @mcp.tool()
+# async def move_folder(...)
+
+@mcp.tool()
 async def get_common_folder_ids(
     email: str,
     password: str,
