@@ -52,7 +52,7 @@ async def list_emails(
 
     result = await quick_request(
         email, password, server_url,
-        "GET", "/api/v1/mails",
+        "GET", "mails",
         params=params
     )
 
@@ -105,7 +105,7 @@ async def search_emails(
 
     result = await quick_request(
         email, password, server_url,
-        "POST", "/api/v1/mails/search",
+        "POST", "mails/search",
         data=search_data
     )
 
@@ -145,13 +145,13 @@ async def get_email(
     """
     result = await quick_request(
         email, password, server_url,
-        "GET", f"/api/v1/mails/{mail_id}"
+        "GET", f"mails/{mail_id}"
     )
 
     if result.get("success") and include_body:
         body_result = await quick_request(
             email, password, server_url,
-            "GET", f"/api/v1/mails/{mail_id}/body"
+            "GET", f"mails/{mail_id}/body"
         )
         if body_result.get("success"):
             result["data"]["body"] = body_result["data"]
@@ -185,7 +185,7 @@ async def get_email_body(
 
     return await quick_request(
         email, password, server_url,
-        "GET", f"/api/v1/mails/{mail_id}/body",
+        "GET", f"mails/{mail_id}/body",
         params=params
     )
 
@@ -243,7 +243,7 @@ async def create_draft(
 
     result = await quick_request(
         email, password, server_url,
-        "POST", "/api/v1/mails",
+        "POST", "mails",
         data=draft_data
     )
 
@@ -309,7 +309,7 @@ async def send_email(
 
     result = await quick_request(
         email, password, server_url,
-        "POST", "/api/v1/mails/send",
+        "POST", "mails/send",
         data=email_data
     )
 
@@ -343,7 +343,7 @@ async def send_draft(
     """
     result = await quick_request(
         email, password, server_url,
-        "POST", f"/api/v1/drafts/{draft_id}/send"
+        "POST", f"drafts/{draft_id}/send"
     )
 
     if result.get("success"):
@@ -403,7 +403,7 @@ async def update_draft(
 
     return await quick_request(
         email, password, server_url,
-        "PUT", f"/api/v1/drafts/{draft_id}",
+        "PUT", f"drafts/{draft_id}",
         data=update_data
     )
 
@@ -436,7 +436,7 @@ async def delete_email(
 
     result = await quick_request(
         email, password, server_url,
-        "DELETE", f"/api/v1/mails/{mail_id}",
+        "DELETE", f"mails/{mail_id}",
         params=params
     )
 
@@ -476,7 +476,7 @@ async def move_email(
 
     result = await quick_request(
         email, password, server_url,
-        "POST", f"/api/v1/mails/{mail_id}/move",
+        "POST", f"mails/{mail_id}/move",
         data=move_data
     )
 
@@ -526,7 +526,7 @@ async def update_email_flags(
 
     result = await quick_request(
         email, password, server_url,
-        "PATCH", f"/api/v1/mails/{mail_id}",
+        "PATCH", f"mails/{mail_id}",
         data=update_data
     )
 
@@ -565,7 +565,7 @@ async def mark_as_spam(
     """
     result = await quick_request(
         email, password, server_url,
-        "POST", f"/api/v1/mails/{mail_id}/spam"
+        "POST", f"mails/{mail_id}/spam"
     )
 
     if result.get("success"):
@@ -597,7 +597,7 @@ async def mark_as_not_spam(
     """
     result = await quick_request(
         email, password, server_url,
-        "POST", f"/api/v1/mails/{mail_id}/notspam"
+        "POST", f"mails/{mail_id}/notspam"
     )
 
     if result.get("success"):
@@ -631,7 +631,7 @@ async def list_attachments(
     """
     result = await quick_request(
         email, password, server_url,
-        "GET", f"/api/v1/mails/{mail_id}/attachments"
+        "GET", f"mails/{mail_id}/attachments"
     )
 
     if result.get("success") and result.get("data"):
@@ -672,7 +672,7 @@ async def get_email_headers(
     """
     return await quick_request(
         email, password, server_url,
-        "GET", f"/api/v1/mails/{mail_id}/headers"
+        "GET", f"mails/{mail_id}/headers"
     )
 
 # Folder Tools
@@ -702,7 +702,7 @@ async def list_folders(
 
     result = await quick_request(
         email, password, server_url,
-        "GET", "/api/v1/folders",
+        "GET", "folders",
         params=params
     )
 

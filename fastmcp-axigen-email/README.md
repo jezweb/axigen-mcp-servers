@@ -2,6 +2,8 @@
 
 MCP server for Axigen email operations, providing comprehensive email management through the Axigen REST API.
 
+⚠️ **IMPORTANT**: This server requires a full Axigen installation with the **Mailbox API** enabled. It will **NOT** work with ax.email or servers that only provide the Account API. The authentication will succeed, but all email operations will fail with 404 errors on servers without the Mailbox API.
+
 ## Features
 
 This server provides 16 tools for email operations:
@@ -120,13 +122,16 @@ The search tool supports various query operators:
 
 ## Requirements
 
-- Axigen server with REST API enabled (Axigen X4 10.4+)
+- Axigen server with **Mailbox REST API** enabled (Axigen X4 10.4+)
+  - Must have full Mailbox API with endpoints like `/api/v1/mails`, `/api/v1/folders`
+  - Account-only API servers (like ax.email) are NOT supported
 - Valid email account credentials
-- Network access to Axigen server (default: https://ax.email)
+- Network access to Axigen server
 
 ## Notes
 
-- All tools use `https://ax.email` as the default server
-- The server URL can be overridden in each tool call
+- Default server is `https://ax.email` but this will NOT work (ax.email lacks Mailbox API)
+- You must override the server_url parameter with a full Axigen server URL
 - Supports session-based authentication with Basic Auth
 - Maximum email listing limit is 500 per request
+- For servers with only Account API, use the Settings, Filters, and Security servers instead
