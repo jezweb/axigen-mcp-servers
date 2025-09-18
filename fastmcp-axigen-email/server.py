@@ -4,12 +4,9 @@ MCP server for Axigen Email operations.
 Provides tools for email management through the Axigen REST API.
 """
 
-import sys
-sys.path.insert(0, 'src')
-
 from fastmcp import FastMCP
 from typing import Dict, Any, Optional, List
-from utils import quick_request, format_email_list, parse_email_addresses
+from src.utils import quick_request, format_email_list, parse_email_addresses
 import json
 
 mcp = FastMCP("Axigen Email Server")
