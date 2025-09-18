@@ -56,8 +56,10 @@ mcp = FastMCP(
 @mcp.tool()
 async def get_account_settings(
     email: str,
+
     password: str,
-    server_url: str
+
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Get all account settings and preferences.
@@ -65,7 +67,7 @@ async def get_account_settings(
     Args:
         email: User's email address
         password: User's password
-        server_url: Axigen server URL (e.g., https://mail.example.com)
+        server_url: Axigen server URL (optional, defaults to https://ax.email)
 
     Returns:
         Complete account settings including language, timezone, theme, etc.
@@ -99,8 +101,8 @@ async def get_account_settings(
 async def update_account_settings(
     email: str,
     password: str,
-    server_url: str,
-    settings: Dict[str, Any]
+    settings: Dict[str, Any],
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Update account settings and preferences.
@@ -159,8 +161,10 @@ async def update_account_settings(
 @mcp.tool()
 async def get_signatures(
     email: str,
+
     password: str,
-    server_url: str
+
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Get all email signatures for the account.
@@ -202,11 +206,11 @@ async def get_signatures(
 async def create_signature(
     email: str,
     password: str,
-    server_url: str,
     name: str,
     content_html: str,
     content_text: Optional[str] = None,
-    is_default: bool = False
+    is_default: bool = False,
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Create a new email signature.
@@ -262,12 +266,12 @@ async def create_signature(
 async def update_signature(
     email: str,
     password: str,
-    server_url: str,
     signature_id: str,
     name: Optional[str] = None,
     content_html: Optional[str] = None,
     content_text: Optional[str] = None,
-    is_default: Optional[bool] = None
+    is_default: Optional[bool] = None,
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Update an existing email signature.
@@ -329,8 +333,8 @@ async def update_signature(
 async def delete_signature(
     email: str,
     password: str,
-    server_url: str,
-    signature_id: str
+    signature_id: str,
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Delete an email signature.
@@ -376,8 +380,10 @@ async def delete_signature(
 @mcp.tool()
 async def get_vacation_settings(
     email: str,
+
     password: str,
-    server_url: str
+
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Get vacation/auto-reply settings.
@@ -419,13 +425,13 @@ async def get_vacation_settings(
 async def set_vacation_reply(
     email: str,
     password: str,
-    server_url: str,
     enabled: bool,
     subject: Optional[str] = None,
     message: Optional[str] = None,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
-    exclude_contacts: bool = False
+    exclude_contacts: bool = False,
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Configure vacation/auto-reply settings.
@@ -494,8 +500,10 @@ async def set_vacation_reply(
 @mcp.tool()
 async def get_contact_info(
     email: str,
+
     password: str,
-    server_url: str
+
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Get account contact information.
@@ -666,9 +674,9 @@ async def get_ui_settings(
 async def save_ui_settings(
     email: str,
     password: str,
-    server_url: str,
     settings_data: str,
-    client_type: str = "webmail"
+    client_type: str = "webmail",
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Save UI settings for WebMail or custom client.
@@ -729,8 +737,10 @@ async def save_ui_settings(
 @mcp.tool()
 async def get_account_info(
     email: str,
+
     password: str,
-    server_url: str
+
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Get comprehensive account information including quotas, limits, and policies.

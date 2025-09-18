@@ -46,11 +46,17 @@ fastmcp run server.py
 All servers follow the same authentication pattern - credentials are passed with each request:
 
 ```python
-# Example with working test server
+# Using default server (https://ax.email)
+result = await get_account_settings(
+    email="user@example.com",
+    password="password123"
+)
+
+# Or specify a custom server
 result = await get_account_settings(
     email="user@example.com",
     password="password123",
-    server_url="https://ax.email"  # or your Axigen server
+    server_url="https://mail.yourdomain.com"
 )
 ```
 

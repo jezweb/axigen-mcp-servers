@@ -50,7 +50,7 @@ fastmcp run server.py
 All tools require:
 - `email`: Your Axigen email address
 - `password`: Your account password
-- `server_url`: Axigen server URL (e.g., https://mail.example.com)
+- `server_url`: Axigen server URL (optional, defaults to https://ax.email)
 
 Sessions are cached for 30 minutes to improve performance.
 

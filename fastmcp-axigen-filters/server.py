@@ -56,8 +56,10 @@ mcp = FastMCP(
 @mcp.tool()
 async def get_spam_settings(
     email: str,
+
     password: str,
-    server_url: str
+
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Get anti-spam and anti-virus (AVAS) settings.
@@ -65,7 +67,7 @@ async def get_spam_settings(
     Args:
         email: User's email address
         password: User's password
-        server_url: Axigen server URL (e.g., https://mail.example.com)
+        server_url: Axigen server URL (optional, defaults to https://ax.email)
 
     Returns:
         Current AVAS settings including whitelist/blacklist options
@@ -207,8 +209,8 @@ async def get_whitelist(
 async def add_to_whitelist(
     email: str,
     password: str,
-    server_url: str,
-    email_address: str
+    email_address: str,
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Add an email address to the whitelist.
@@ -260,8 +262,8 @@ async def add_to_whitelist(
 async def remove_from_whitelist(
     email: str,
     password: str,
-    server_url: str,
-    whitelist_id: str
+    whitelist_id: str,
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Remove an email address from the whitelist.
@@ -355,8 +357,8 @@ async def get_blacklist(
 async def add_to_blacklist(
     email: str,
     password: str,
-    server_url: str,
-    email_address: str
+    email_address: str,
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Add an email address to the blacklist.
@@ -419,8 +421,8 @@ async def add_to_blacklist(
 async def remove_from_blacklist(
     email: str,
     password: str,
-    server_url: str,
-    blacklist_id: str
+    blacklist_id: str,
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Remove an email address from the blacklist.
@@ -679,8 +681,10 @@ async def bulk_update_blacklist(
 @mcp.tool()
 async def get_filter_info(
     email: str,
+
     password: str,
-    server_url: str
+
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Get information about available filter capabilities.

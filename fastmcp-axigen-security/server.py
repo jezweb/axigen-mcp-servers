@@ -58,8 +58,10 @@ mcp = FastMCP(
 @mcp.tool()
 async def get_security_info(
     email: str,
+
     password: str,
-    server_url: str
+
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Get comprehensive security information including policies and restrictions.
@@ -67,7 +69,7 @@ async def get_security_info(
     Args:
         email: User's email address
         password: User's password
-        server_url: Axigen server URL (e.g., https://mail.example.com)
+        server_url: Axigen server URL (optional, defaults to https://ax.email)
 
     Returns:
         Complete security information including:
@@ -131,8 +133,10 @@ async def get_security_info(
 @mcp.tool()
 async def get_temporary_aliases(
     email: str,
+
     password: str,
-    server_url: str
+
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Get all temporary email aliases for the account.
@@ -255,8 +259,8 @@ async def create_temporary_alias(
 async def delete_temporary_alias(
     email: str,
     password: str,
-    server_url: str,
-    alias_id: str
+    alias_id: str,
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Delete a temporary email alias.
@@ -298,8 +302,10 @@ async def delete_temporary_alias(
 @mcp.tool()
 async def cleanup_expired_aliases(
     email: str,
+
     password: str,
-    server_url: str
+
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Remove all expired temporary aliases.
@@ -385,8 +391,10 @@ async def cleanup_expired_aliases(
 @mcp.tool()
 async def get_permanent_aliases(
     email: str,
+
     password: str,
-    server_url: str
+
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Get permanent email aliases (domain and account aliases).
@@ -462,9 +470,9 @@ async def get_permanent_aliases(
 async def change_password(
     email: str,
     password: str,
-    server_url: str,
     new_password: str,
-    logout_other_sessions: bool = False
+    logout_other_sessions: bool = False,
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Change the account password.
@@ -532,8 +540,10 @@ async def change_password(
 @mcp.tool()
 async def get_password_policy(
     email: str,
+
     password: str,
-    server_url: str
+
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Get the password policy requirements for the account.
@@ -659,8 +669,10 @@ async def get_password_policy(
 @mcp.tool()
 async def get_account_limits(
     email: str,
+
     password: str,
-    server_url: str
+
+    server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
     Get account quotas and usage limits.
