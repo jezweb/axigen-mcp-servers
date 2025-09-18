@@ -1,6 +1,6 @@
 """
-Utility Functions for Axigen Email MCP Server
-==============================================
+Utility Functions for Axigen Settings MCP Server
+==================================================
 Shared utilities for authentication, HTTP client, and response formatting.
 """
 
@@ -92,40 +92,6 @@ def validate_server_url(url: str) -> Tuple[bool, Optional[str]]:
     return True, None
 
 # ============================================================================
-# Email-Specific Utility Functions
-# ============================================================================
-
-def format_email_list(emails: List[Dict[str, Any]]) -> str:
-    """Format a list of emails for display."""
-    if not emails:
-        return "No emails found"
-
-    result = []
-    for email in emails:
-        subject = email.get("subject", "(no subject)")
-        from_addr = email.get("from", "(unknown)")
-        date = email.get("date", "")
-        is_unread = email.get("isUnread", False)
-        is_flagged = email.get("isFlagged", False)
-
-        status = []
-        if is_unread:
-            status.append("UNREAD")
-        if is_flagged:
-            status.append("FLAGGED")
-        status_str = f" [{', '.join(status)}]" if status else ""
-
-        result.append(f"- {subject} | From: {from_addr} | {date}{status_str}")
-
-    return "\n".join(result)
-
-def parse_email_addresses(addresses: str) -> List[str]:
-    """Parse comma-separated email addresses."""
-    if not addresses:
-        return []
-    return [addr.strip() for addr in addresses.split(",") if addr.strip()]
-
-# ============================================================================
 # Session Management
 # ============================================================================
 
@@ -194,13 +160,7 @@ class AxigenSession:
                 f"{self.base_url}/login",
                 headers=headers
             ) as response:
-                if response.status == 404:
-                    # Login endpoint doesn't exist, use sessionless auth
-                    logger.info(f"Login endpoint not found, using sessionless auth for {self.email}")
-                    self.session_id = "sessionless"
-                    self.expires_at = datetime.now() + self.session_ttl
-                    return self.session_id
-                elif response.status == 401:
+                if response.status == 401:
                     raise AuthenticationError("Invalid email or password")
                 elif response.status != 200:
                     text = await response.text()
@@ -262,11 +222,9 @@ class AxigenSession:
         # Build request headers
         request_headers = {
             "Authorization": self.auth_header,
+            "X-Axigen-Session": self.session_id,
             "Content-Type": "application/json"
         }
-        # Only add session header if we have a real session ID
-        if self.session_id and self.session_id != "sessionless":
-            request_headers["X-Axigen-Session"] = self.session_id
         if headers:
             request_headers.update(headers)
 
@@ -288,13 +246,12 @@ class AxigenSession:
 
                     # Handle authentication errors
                     if response.status == 401:
-                        if attempt == 0 and self.session_id != "sessionless":
+                        if attempt == 0:
                             # First attempt failed, try re-authenticating
                             logger.info("Session expired, re-authenticating...")
                             self.session_id = None
                             await self.authenticate()
-                            if self.session_id and self.session_id != "sessionless":
-                                request_headers["X-Axigen-Session"] = self.session_id
+                            request_headers["X-Axigen-Session"] = self.session_id
                             continue
                         else:
                             raise AuthenticationError("Authentication failed after retry")
