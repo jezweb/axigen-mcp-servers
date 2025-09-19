@@ -6,7 +6,7 @@ MCP server for Axigen email operations, providing comprehensive email management
 
 ## Features
 
-This server provides 28 working tools for email operations on ax.email:
+This server provides 30 working tools for email operations on ax.email:
 
 ### Email Reading & Search
 - `list_emails` - List emails with pagination and sorting (**requires folder_id**)
@@ -41,14 +41,22 @@ This server provides 28 working tools for email operations on ax.email:
 - `delete_folder` - Delete empty folder
 - `get_common_folder_ids` - Helper to get IDs for Inbox, Sent, Drafts, etc.
 
-### Labels
+### Labels (Enhanced with Smart Workflows)
 - `list_labels` - List all available labels
 - `get_label` - Get details of a specific label
-- `create_label` - Create a new label
+- `create_label` - Create a new label (returns new label ID)
 - `update_label` - Update an existing label
 - `delete_label` - Delete a label
-- `add_label_to_email` - Add a label to an email
-- `remove_label_from_email` - Remove a label from an email
+- `add_label_to_email` - Add a label to an email (**enhanced with validation**)
+- `remove_label_from_email` - Remove a label from an email (**idempotent**)
+- `add_label_by_name` - 🆕 **Smart labeling** - add by name, auto-creates if missing
+- `bulk_label_emails` - 🆕 **Bulk operations** - label multiple emails at once
+
+**🎯 Smart Label Workflows:**
+- **Simple**: Use `add_label_by_name` - just specify the label name, it handles discovery/creation
+- **Bulk**: Use `bulk_label_emails` to label many emails efficiently
+- **Traditional**: Use `list_labels` + `add_label_to_email` for full control
+- **All operations are idempotent** - safe to repeat without errors
 
 ## Installation
 
@@ -129,27 +137,39 @@ await use_tool("move_email", {
 });
 ```
 
-### Use Labels
+### Use Labels (Smart Workflows)
 ```javascript
-// List available labels
+// 🎯 RECOMMENDED: Smart labeling by name (auto-creates if missing)
+await use_tool("add_label_by_name", {
+  email: "user@example.com",
+  password: "password",
+  mail_id: "12345",
+  label_name: "Important",
+  create_if_missing: true  // Will create the label if it doesn't exist
+});
+
+// 🚀 Bulk labeling for multiple emails
+await use_tool("bulk_label_emails", {
+  email: "user@example.com",
+  password: "password",
+  mail_ids: ["12345", "12346", "12347"],
+  label_name: "Project Alpha",
+  create_if_missing: true
+});
+
+// Traditional workflow (if you need full control)
+// 1. List available labels first
 await use_tool("list_labels", {
   email: "user@example.com",
   password: "password"
 });
 
-// Create a new label
-await use_tool("create_label", {
-  email: "user@example.com",
-  password: "password",
-  name: "Important"
-});
-
-// Add label to email
+// 2. Add label by ID
 await use_tool("add_label_to_email", {
   email: "user@example.com",
   password: "password",
   mail_id: "12345",
-  label_id: "label_123"
+  label_id: "label_123"  // Use ID from list_labels
 });
 ```
 

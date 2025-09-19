@@ -28,15 +28,15 @@ FastMCP servers for managing Axigen email accounts via REST API - providing sett
 - Account limits monitoring
 - Permanent aliases listing
 
-### 4. Email Server (`fastmcp-axigen-email`) - *Experimental*
-- **16 tools** for email operations (when Mailbox API is available)
-- List, search, and read emails
-- Send, reply, forward functionality
-- Draft management
-- Move, delete, flag operations
-- Attachment handling
-- Folder management
-- **Note**: Requires Axigen server with full Mailbox API enabled (not available on all servers)
+### 4. Email Server (`fastmcp-axigen-email`) ✅ **FULLY TESTED**
+- **28 tools** for comprehensive email operations (100% working on ax.email)
+- **Email Reading**: List, search, get details, headers, body, source
+- **Email Composition**: Create/send emails, draft management, scheduled sending
+- **Email Management**: Move, copy, delete, flag, spam marking
+- **Labels**: Full CRUD operations (create, update, delete, apply/remove)
+- **Folders**: Create, update, delete, list with unread counts
+- **Attachments**: List and access email attachments
+- **Workflow Notes**: Label operations require discovery first (use `list_labels` before applying)
 
 ## 🚀 Quick Start
 

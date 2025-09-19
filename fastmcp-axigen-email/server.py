@@ -12,6 +12,29 @@ import base64
 
 mcp = FastMCP("Axigen Email Server")
 
+# Helper functions
+
+async def find_label_by_name(email: str, password: str, server_url: str, label_name: str) -> Optional[str]:
+    """Find a label ID by name, with option to create if not found."""
+    try:
+        result = await quick_request(email, password, server_url, "GET", "labels")
+
+        if result.get("items"):
+            for label in result["items"]:
+                if label.get("name") == label_name:
+                    return label.get("id")
+        return None
+    except Exception:
+        return None
+
+async def validate_label_exists(email: str, password: str, server_url: str, label_id: str) -> bool:
+    """Check if a label ID exists."""
+    try:
+        result = await quick_request(email, password, server_url, "GET", f"labels/{label_id}")
+        return result.get("id") == label_id
+    except Exception:
+        return False
+
 # Email Listing and Search Tools
 
 @mcp.tool()
@@ -1029,25 +1052,43 @@ async def add_label_to_email(
         server_url: Axigen server URL (default: https://ax.email)
 
     Returns:
-        Operation status
+        Operation status with detailed feedback
     """
+    # Validate label exists first
+    label_exists = await validate_label_exists(email, password, server_url, label_id)
+    if not label_exists:
+        return {
+            "success": False,
+            "error": f"Label ID '{label_id}' not found",
+            "message": "Use list_labels to get valid label IDs, or create_label to make a new one",
+            "suggestion": "Run list_labels first to discover available labels"
+        }
+
     label_data = {
         "labelId": label_id
     }
 
-    result = await quick_request(
-        email, password, server_url,
-        "POST", f"mails/{mail_id}/labels",
-        data=label_data
-    )
+    try:
+        result = await quick_request(
+            email, password, server_url,
+            "POST", f"mails/{mail_id}/labels",
+            data=label_data
+        )
 
-    if result.get("success"):
-        return {
-            "success": True,
-            "message": f"Label {label_id} added to email successfully"
-        }
+        if result.get("success"):
+            return {
+                "success": True,
+                "message": f"Label {label_id} added to email successfully"
+            }
 
-    return result
+        return result
+    except Exception as e:
+        if "already applied" in str(e).lower():
+            return {
+                "success": True,
+                "message": f"Label {label_id} already applied to email (idempotent operation)"
+            }
+        raise
 
 @mcp.tool()
 async def remove_label_from_email(
@@ -1068,20 +1109,164 @@ async def remove_label_from_email(
         server_url: Axigen server URL (default: https://ax.email)
 
     Returns:
-        Operation status
+        Operation status with detailed feedback
     """
-    result = await quick_request(
-        email, password, server_url,
-        "DELETE", f"mails/{mail_id}/labels/{label_id}"
-    )
+    try:
+        result = await quick_request(
+            email, password, server_url,
+            "DELETE", f"mails/{mail_id}/labels/{label_id}"
+        )
 
-    if result.get("success"):
+        if result.get("success"):
+            return {
+                "success": True,
+                "message": f"Label {label_id} removed from email successfully"
+            }
+
+        return result
+    except Exception as e:
+        if "not found" in str(e).lower() or "404" in str(e):
+            return {
+                "success": True,
+                "message": f"Label {label_id} was not applied to email (idempotent operation)"
+            }
+        raise
+
+@mcp.tool()
+async def add_label_by_name(
+    email: str,
+    password: str,
+    mail_id: str,
+    label_name: str,
+    create_if_missing: bool = True,
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    Add a label to an email by name, with option to auto-create the label.
+
+    This is a convenience function that handles the label discovery workflow
+    automatically, making labeling much easier for users.
+
+    Args:
+        email: User email for authentication
+        password: User password
+        mail_id: The email ID
+        label_name: The label name to add
+        create_if_missing: Create the label if it doesn't exist (default: True)
+        server_url: Axigen server URL (default: https://ax.email)
+
+    Returns:
+        Operation status with detailed workflow information
+    """
+    # First try to find existing label
+    label_id = await find_label_by_name(email, password, server_url, label_name)
+
+    if not label_id and create_if_missing:
+        # Create the label
+        try:
+            create_result = await quick_request(
+                email, password, server_url,
+                "POST", "labels",
+                data={"name": label_name}
+            )
+
+            if create_result.get("id"):
+                label_id = create_result["id"]
+            else:
+                return {
+                    "success": False,
+                    "error": f"Failed to create label '{label_name}'",
+                    "details": create_result
+                }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Failed to create label '{label_name}': {str(e)}"
+            }
+    elif not label_id:
         return {
-            "success": True,
-            "message": f"Label {label_id} removed from email successfully"
+            "success": False,
+            "error": f"Label '{label_name}' not found",
+            "message": "Set create_if_missing=True to auto-create, or use list_labels to see available labels"
         }
 
-    return result
+    # Now add the label to the email
+    return await add_label_to_email(email, password, mail_id, label_id, server_url)
+
+@mcp.tool()
+async def bulk_label_emails(
+    email: str,
+    password: str,
+    mail_ids: List[str],
+    label_name: str,
+    create_if_missing: bool = True,
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    Apply a label to multiple emails at once.
+
+    Args:
+        email: User email for authentication
+        password: User password
+        mail_ids: List of email IDs to label
+        label_name: The label name to add
+        create_if_missing: Create the label if it doesn't exist (default: True)
+        server_url: Axigen server URL (default: https://ax.email)
+
+    Returns:
+        Bulk operation results with per-email status
+    """
+    results = {
+        "success": True,
+        "total_emails": len(mail_ids),
+        "successful": 0,
+        "failed": 0,
+        "details": []
+    }
+
+    # Get or create label once
+    label_id = await find_label_by_name(email, password, server_url, label_name)
+
+    if not label_id and create_if_missing:
+        try:
+            create_result = await quick_request(
+                email, password, server_url,
+                "POST", "labels",
+                data={"name": label_name}
+            )
+            if create_result.get("id"):
+                label_id = create_result["id"]
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Failed to create label '{label_name}': {str(e)}"
+            }
+
+    if not label_id:
+        return {
+            "success": False,
+            "error": f"Label '{label_name}' not found and create_if_missing=False"
+        }
+
+    # Apply label to each email
+    for mail_id in mail_ids:
+        try:
+            result = await add_label_to_email(email, password, mail_id, label_id, server_url)
+            if result.get("success"):
+                results["successful"] += 1
+                results["details"].append({"mail_id": mail_id, "status": "success"})
+            else:
+                results["failed"] += 1
+                results["details"].append({"mail_id": mail_id, "status": "failed", "error": result.get("error", "Unknown error")})
+        except Exception as e:
+            results["failed"] += 1
+            results["details"].append({"mail_id": mail_id, "status": "failed", "error": str(e)})
+
+    if results["failed"] > 0:
+        results["success"] = False
+
+    results["message"] = f"Labeled {results['successful']}/{results['total_emails']} emails with '{label_name}'"
+    return results
 
 @mcp.tool()
 async def get_email_source(
