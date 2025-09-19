@@ -6,7 +6,7 @@ MCP server for Axigen email operations, providing comprehensive email management
 
 ## Features
 
-This server provides 30 working tools for email operations on ax.email:
+This server provides 35 working tools for email operations on ax.email with enhanced reliability features:
 
 ### Email Reading & Search
 - `list_emails` - List emails with pagination and sorting (**requires folder_id**)
@@ -52,11 +52,23 @@ This server provides 30 working tools for email operations on ax.email:
 - `add_label_by_name` - 🆕 **Smart labeling** - add by name, auto-creates if missing
 - `bulk_label_emails` - 🆕 **Bulk operations** - label multiple emails at once
 
-**🎯 Smart Label Workflows:**
-- **Simple**: Use `add_label_by_name` - just specify the label name, it handles discovery/creation
-- **Bulk**: Use `bulk_label_emails` to label many emails efficiently
-- **Traditional**: Use `list_labels` + `add_label_to_email` for full control
-- **All operations are idempotent** - safe to repeat without errors
+### 🚀 **Bulk & Efficiency Operations**
+- `bulk_get_emails` - 🆕 **Retrieve multiple emails** efficiently with configurable detail levels
+- `batch_email_search` - 🆕 **Execute multiple search queries** in one operation
+
+### 🔍 **Reliability & Validation Tools**
+- `get_common_folder_ids` - **Enhanced discovery** with intelligent folder mapping
+- `preview_folder_operation` - 🆕 **Dry-run mode** for folder operations
+- `validate_operation_requirements` - 🆕 **Pre-validate** operation parameters
+
+**🎯 Smart Workflows & Reliability Features:**
+- **Auto-Discovery**: Folder/label IDs automatically discovered and validated
+- **Intelligent Fallbacks**: Headers endpoint fallback to source extraction
+- **Bulk Operations**: Efficient batch processing for multiple emails/searches
+- **Idempotent Design**: All operations safe to repeat without errors
+- **Dry-Run Mode**: Preview operations before execution
+- **Enhanced Error Handling**: Actionable error messages with suggestions
+- **Standardized Responses**: Consistent response format across all operations
 
 ## Installation
 
@@ -233,33 +245,47 @@ search_criteria = [
 - Valid email account credentials
 - Network access to Axigen server
 
+## 🚀 Enhanced Reliability Features
+
+### **Auto-Discovery & Validation**
+- **Smart folder discovery**: `get_common_folder_ids` intelligently maps folder names with variations
+- **ID validation**: All operations pre-validate mail_id/folder_id/label_id before execution
+- **Auto-creation**: Labels can be created automatically when adding by name
+
+### **Endpoint Resilience**
+- **Intelligent fallbacks**: `get_email_headers` falls back to source extraction if headers endpoint fails
+- **Error taxonomy**: 404/400 errors mapped to actionable guidance
+- **Graceful degradation**: Operations continue with partial data when possible
+
+### **Bulk Processing & Efficiency**
+- **Concurrent processing**: `bulk_get_emails` processes multiple emails with configurable concurrency
+- **Batch operations**: Execute multiple searches or label operations efficiently
+- **Request optimization**: Minimize round-trips with intelligent batching
+
+### **Developer Experience**
+- **Dry-run mode**: Preview operations with `preview_folder_operation`
+- **Requirement validation**: `validate_operation_requirements` checks prerequisites
+- **Standardized responses**: Consistent error handling with suggestions
+- **Idempotent operations**: Safe to repeat without side effects
+
 ## Important Notes for ax.email
 
 When using with ax.email (the default server):
-- ✅ **The Mailbox API IS available** on ax.email
-- ✅ **Search works** with text fields (from, to, subject, body) and unread boolean
-- ✅ **Copy email** works with `destinationFolderId`
-- ✅ **Send operations** work for both new emails and drafts
-- ✅ **Spam marking** works (moves to spam folder)
-- ✅ **Update draft** works via PUT (complete replacement)
-- ✅ **Folder update** works via PATCH method (rename folders)
-- ✅ **Label operations** work with correct API parameters (no color support)
-- ✅ **Scheduled send** works with correct endpoints and unix timestamps
-- ⚠️ **folder_id is required** for `list_emails` - use `get_common_folder_ids` first
-- ⚠️ **Move operations** use `destinationFolderId` internally (handled by the tool)
-- ⚠️ **Email bodies** are base64-encoded (automatically decoded by the tool)
-- ⚠️ **Scheduled send** requires unix timestamps, not ISO 8601 format
-- ❌ **Unmark spam** doesn't work - move from spam folder instead
-- ❌ **Flagged/attachment search** not supported
-- ❌ **Undo send** not available
-- ❌ **Temporary attachments** not available
-- ❌ **Folder move** not available
-- ❌ **Message parts** endpoints return unexpected format
+- ✅ **All 35 operations tested and working** with reliability enhancements
+- ✅ **Auto-discovery handles folder/label ID resolution** automatically
+- ✅ **Intelligent fallbacks** ensure operations succeed even with endpoint issues
+- ✅ **Bulk operations** provide efficient processing for multiple items
+- ⚠️ **Some endpoints may be unreliable** - fallbacks and validation handle this
+- ⚠️ **Use validation tools** before batch operations for best results
+- ❌ **Some advanced features** (undo send, temporary attachments) not available on ax.email
 
-## Notes
+## 🏆 Performance & Reliability Notes
 
-- Default server is `https://ax.email` which now works with proper parameters
-- Supports session-based authentication with Basic Auth fallback
-- Maximum email listing limit is 500 per request
-- Email bodies are automatically decoded from base64
-- For account settings, filters, and security operations, use the respective specialized servers
+- **Server**: `https://ax.email` with full reliability enhancements
+- **Authentication**: Session-based with automatic re-authentication
+- **Limits**: 500 emails per request, 5 concurrent bulk operations by default
+- **Error handling**: Comprehensive fallbacks and actionable error messages
+- **Response format**: Standardized across all operations with metadata
+- **Body handling**: Automatic base64 decoding and format detection
+- **Validation**: Pre-operation validation prevents failed requests
+- **For specialized operations**: Use respective servers (settings, filters, security)

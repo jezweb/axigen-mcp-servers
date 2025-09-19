@@ -35,6 +35,131 @@ async def validate_label_exists(email: str, password: str, server_url: str, labe
     except Exception:
         return False
 
+async def validate_mail_id(email: str, password: str, server_url: str, mail_id: str) -> Dict[str, Any]:
+    """Validate a mail ID exists and return validation info."""
+    try:
+        # Try to get basic email info first
+        result = await quick_request(email, password, server_url, "GET", f"mails/{mail_id}")
+        if result.get("id") == mail_id:
+            return {
+                "valid": True,
+                "mail_id": mail_id,
+                "subject": result.get("subject", "Unknown"),
+                "from": result.get("from", "Unknown")
+            }
+    except Exception as e:
+        return {
+            "valid": False,
+            "mail_id": mail_id,
+            "error": str(e),
+            "suggestion": "Verify mail_id exists by using list_emails or search_emails first"
+        }
+    return {"valid": False, "mail_id": mail_id}
+
+async def validate_folder_id(email: str, password: str, server_url: str, folder_id: str) -> Dict[str, Any]:
+    """Validate a folder ID exists and return folder info."""
+    try:
+        # Get all folders to check if this ID exists
+        result = await quick_request(email, password, server_url, "GET", "folders")
+        if result.get("items"):
+            for folder in result["items"]:
+                if folder.get("id") == folder_id:
+                    return {
+                        "valid": True,
+                        "folder_id": folder_id,
+                        "name": folder.get("name", "Unknown"),
+                        "unread_count": folder.get("unreadCount", 0)
+                    }
+        return {
+            "valid": False,
+            "folder_id": folder_id,
+            "error": "Folder ID not found",
+            "suggestion": "Use get_common_folder_ids or list_folders to get valid folder IDs"
+        }
+    except Exception as e:
+        return {
+            "valid": False,
+            "folder_id": folder_id,
+            "error": str(e),
+            "suggestion": "Use get_common_folder_ids to discover available folders"
+        }
+
+async def auto_discover_folder_id(email: str, password: str, server_url: str, folder_name: str) -> Optional[str]:
+    """Auto-discover folder ID by name (case-insensitive)."""
+    try:
+        result = await quick_request(email, password, server_url, "GET", "folders")
+        if result.get("items"):
+            folder_name_lower = folder_name.lower()
+            for folder in result["items"]:
+                if folder.get("name", "").lower() == folder_name_lower:
+                    return folder.get("id")
+        return None
+    except Exception:
+        return None
+
+async def get_reliable_common_folders(email: str, password: str, server_url: str) -> Dict[str, Any]:
+    """Get fresh common folder IDs with validation."""
+    try:
+        # Get all folders first
+        folders_result = await quick_request(email, password, server_url, "GET", "folders")
+
+        if not folders_result.get("items"):
+            return {
+                "success": False,
+                "error": "No folders found",
+                "suggestion": "Check account permissions or server configuration"
+            }
+
+        folders = {}
+        folder_mapping = {
+            "inbox": ["inbox", "inboxx"],  # Handle variations
+            "sent": ["sent", "sent items", "sent mail"],
+            "drafts": ["drafts", "draft"],
+            "trash": ["trash", "deleted", "deleted items"],
+            "spam": ["spam", "junk", "junk mail"],
+            "archive": ["archive", "archives"]
+        }
+
+        # Map known folder types
+        for folder in folders_result["items"]:
+            folder_name = folder.get("name", "").lower()
+            folder_id = folder.get("id")
+
+            for standard_name, variations in folder_mapping.items():
+                if folder_name in variations:
+                    folders[standard_name] = folder_id
+                    break
+
+        return {
+            "success": True,
+            "folders": folders,
+            "total_folders": len(folders_result["items"]),
+            "discovered": len(folders)
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "suggestion": "Check authentication credentials and server connectivity"
+        }
+
+# Standardized error response helper
+
+def create_error_response(operation: str, error: str, suggestion: str = None, details: Dict = None) -> Dict[str, Any]:
+    """Create standardized error response with actionable guidance."""
+    response = {
+        "success": False,
+        "operation": operation,
+        "error": error
+    }
+
+    if suggestion:
+        response["suggestion"] = suggestion
+    if details:
+        response["details"] = details
+
+    return response
+
 # Email Listing and Search Tools
 
 @mcp.tool()
@@ -174,41 +299,260 @@ async def search_emails(
 
     return result
 
+# Bulk Operations for Efficiency
+
+@mcp.tool()
+async def bulk_get_emails(
+    email: str,
+    password: str,
+    mail_ids: List[str],
+    include_body: bool = False,
+    include_headers: bool = False,
+    max_concurrent: int = 5,
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    Retrieve multiple emails efficiently with configurable detail levels.
+
+    Args:
+        email: User email for authentication
+        password: User password
+        mail_ids: List of email IDs to retrieve
+        include_body: Include email bodies (increases processing time)
+        include_headers: Include email headers (increases processing time)
+        max_concurrent: Maximum concurrent requests (default: 5)
+        server_url: Axigen server URL (default: https://ax.email)
+
+    Returns:
+        Bulk retrieval results with per-email status
+    """
+    import asyncio
+
+    results = {
+        "success": True,
+        "total_requested": len(mail_ids),
+        "successful": 0,
+        "failed": 0,
+        "emails": {},
+        "errors": {},
+        "processing_time": "estimated"
+    }
+
+    async def fetch_single_email(mail_id: str) -> tuple[str, dict]:
+        """Fetch a single email with error handling."""
+        try:
+            # Get basic email info
+            email_result = await quick_request(
+                email, password, server_url,
+                "GET", f"mails/{mail_id}"
+            )
+
+            if not email_result.get("success"):
+                return mail_id, {"error": "Failed to retrieve email", "details": email_result}
+
+            email_data = email_result.get("data", {})
+
+            # Add body if requested
+            if include_body:
+                try:
+                    body_result = await quick_request(
+                        email, password, server_url,
+                        "GET", f"mails/{mail_id}/body"
+                    )
+                    if body_result.get("success"):
+                        email_data["body"] = body_result.get("data")
+                    else:
+                        email_data["body_error"] = "Could not retrieve body"
+                except Exception as e:
+                    email_data["body_error"] = str(e)
+
+            # Add headers if requested
+            if include_headers:
+                try:
+                    headers_result = await quick_request(
+                        email, password, server_url,
+                        "GET", f"mails/{mail_id}/headers"
+                    )
+                    if headers_result.get("success"):
+                        email_data["headers"] = headers_result.get("data")
+                    else:
+                        email_data["headers_error"] = "Could not retrieve headers"
+                except Exception as e:
+                    email_data["headers_error"] = str(e)
+
+            return mail_id, email_data
+
+        except Exception as e:
+            return mail_id, {"error": str(e)}
+
+    # Process emails in batches to respect server limits
+    semaphore = asyncio.Semaphore(max_concurrent)
+
+    async def fetch_with_semaphore(mail_id: str):
+        async with semaphore:
+            return await fetch_single_email(mail_id)
+
+    # Execute all requests
+    tasks = [fetch_with_semaphore(mail_id) for mail_id in mail_ids]
+    fetch_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    # Process results
+    for result in fetch_results:
+        if isinstance(result, Exception):
+            results["failed"] += 1
+            results["errors"]["general"] = str(result)
+        else:
+            mail_id, email_data = result
+            if "error" in email_data:
+                results["failed"] += 1
+                results["errors"][mail_id] = email_data["error"]
+            else:
+                results["successful"] += 1
+                results["emails"][mail_id] = email_data
+
+    # Update success status
+    if results["failed"] > 0:
+        results["success"] = results["successful"] > 0  # Partial success allowed
+
+    results["message"] = f"Retrieved {results['successful']}/{results['total_requested']} emails"
+    return results
+
+@mcp.tool()
+async def batch_email_search(
+    email: str,
+    password: str,
+    search_queries: List[Dict[str, Any]],
+    max_results_per_query: int = 20,
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    Execute multiple search queries efficiently.
+
+    Args:
+        email: User email for authentication
+        password: User password
+        search_queries: List of search query dictionaries
+        max_results_per_query: Max results per query (default: 20)
+        server_url: Axigen server URL (default: https://ax.email)
+
+    Returns:
+        Batch search results with per-query status
+    """
+    results = {
+        "success": True,
+        "total_queries": len(search_queries),
+        "successful_queries": 0,
+        "failed_queries": 0,
+        "search_results": {},
+        "errors": {}
+    }
+
+    for i, query in enumerate(search_queries):
+        query_id = f"query_{i + 1}"
+        try:
+            search_result = await search_emails(
+                email, password,
+                query.get("search_criteria", []),
+                query.get("start", 0),
+                min(query.get("limit", max_results_per_query), max_results_per_query),
+                server_url
+            )
+
+            if search_result.get("success"):
+                results["successful_queries"] += 1
+                results["search_results"][query_id] = {
+                    "query": query,
+                    "results": search_result
+                }
+            else:
+                results["failed_queries"] += 1
+                results["errors"][query_id] = search_result.get("error", "Unknown error")
+
+        except Exception as e:
+            results["failed_queries"] += 1
+            results["errors"][query_id] = str(e)
+
+    if results["failed_queries"] > 0:
+        results["success"] = results["successful_queries"] > 0
+
+    results["message"] = f"Executed {results['successful_queries']}/{results['total_queries']} search queries"
+    return results
+
 @mcp.tool()
 async def get_email(
     email: str,
     password: str,
     mail_id: str,
     include_body: bool = True,
+    validate_id: bool = True,
     server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
-    Get detailed information about a specific email.
+    Get detailed information about a specific email with validation.
 
     Args:
         email: User email for authentication
         password: User password
         mail_id: The email ID to retrieve
         include_body: Whether to include email body (default: True)
+        validate_id: Pre-validate mail_id exists (default: True)
         server_url: Axigen server URL (default: https://ax.email)
 
     Returns:
-        Full email details including headers and body
+        Full email details including headers and body with validation info
     """
-    result = await quick_request(
-        email, password, server_url,
-        "GET", f"mails/{mail_id}"
-    )
+    # Pre-validate mail ID if requested
+    if validate_id:
+        validation = await validate_mail_id(email, password, server_url, mail_id)
+        if not validation["valid"]:
+            return create_error_response(
+                "get_email",
+                f"Invalid mail_id: {validation['error']}",
+                validation.get("suggestion", "Verify mail_id using list_emails or search_emails"),
+                {"mail_id": mail_id, "validation": validation}
+            )
 
-    if result.get("success") and include_body:
-        body_result = await quick_request(
+    try:
+        result = await quick_request(
             email, password, server_url,
-            "GET", f"mails/{mail_id}/body"
+            "GET", f"mails/{mail_id}"
         )
-        if body_result.get("success"):
-            result["data"]["body"] = body_result["data"]
 
-    return result
+        if result.get("success") and include_body:
+            try:
+                body_result = await quick_request(
+                    email, password, server_url,
+                    "GET", f"mails/{mail_id}/body"
+                )
+                if body_result.get("success"):
+                    result["data"]["body"] = body_result["data"]
+                    result["data"]["body_included"] = True
+                else:
+                    result["data"]["body_included"] = False
+                    result["data"]["body_error"] = "Body could not be retrieved"
+            except Exception as e:
+                result["data"]["body_included"] = False
+                result["data"]["body_error"] = f"Body retrieval failed: {str(e)}"
+
+        # Add metadata for reliability
+        if result.get("success"):
+            result["metadata"] = {
+                "mail_id": mail_id,
+                "retrieved_at": "now",
+                "body_included": result.get("data", {}).get("body_included", False),
+                "validated": validate_id
+            }
+
+        return result
+    except Exception as e:
+        if "404" in str(e):
+            return create_error_response(
+                "get_email",
+                "Email not found",
+                "Verify mail_id exists using list_emails or search_emails",
+                {"mail_id": mail_id, "error": str(e)}
+            )
+        raise
 
 @mcp.tool()
 async def get_email_body(
@@ -1386,24 +1730,86 @@ async def get_email_headers(
     email: str,
     password: str,
     mail_id: str,
+    use_fallback: bool = True,
     server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
-    Get email headers.
+    Get email headers with intelligent fallbacks for reliability.
 
     Args:
         email: User email for authentication
         password: User password
         mail_id: The email ID
+        use_fallback: Use get_email_source fallback if headers endpoint fails (default: True)
         server_url: Axigen server URL (default: https://ax.email)
 
     Returns:
-        Email headers
+        Email headers with fallback information
     """
-    return await quick_request(
-        email, password, server_url,
-        "GET", f"mails/{mail_id}/headers"
-    )
+    try:
+        # First try the dedicated headers endpoint
+        result = await quick_request(
+            email, password, server_url,
+            "GET", f"mails/{mail_id}/headers"
+        )
+
+        if result.get("success"):
+            result["source"] = "headers_endpoint"
+            return result
+
+    except Exception as e:
+        headers_error = str(e)
+
+        if use_fallback and "404" in headers_error:
+            # Fallback: Extract headers from email source
+            try:
+                source_result = await quick_request(
+                    email, password, server_url,
+                    "GET", f"mails/{mail_id}/source"
+                )
+
+                if source_result.get("success") or source_result.get("raw_response"):
+                    # Extract headers from source
+                    source_text = source_result.get("raw_response") or source_result.get("source", "")
+
+                    if isinstance(source_text, str) and source_text:
+                        # Extract headers (everything before first empty line)
+                        lines = source_text.split('\n')
+                        headers = []
+                        for line in lines:
+                            if line.strip() == "":
+                                break
+                            headers.append(line)
+
+                        headers_text = '\n'.join(headers)
+
+                        return {
+                            "success": True,
+                            "source": "source_fallback",
+                            "headers": headers_text,
+                            "message": "Headers extracted from email source (headers endpoint unavailable)",
+                            "fallback_used": True,
+                            "original_error": headers_error
+                        }
+
+            except Exception as fallback_error:
+                return create_error_response(
+                    "get_email_headers",
+                    f"Headers endpoint failed and fallback failed",
+                    "Try using get_email_source to get full email content",
+                    {
+                        "mail_id": mail_id,
+                        "headers_error": headers_error,
+                        "fallback_error": str(fallback_error)
+                    }
+                )
+
+        return create_error_response(
+            "get_email_headers",
+            f"Headers endpoint failed: {headers_error}",
+            "Try get_email_source for full email content, or set use_fallback=True",
+            {"mail_id": mail_id, "error": headers_error}
+        )
 
 # Folder Tools
 
@@ -1596,7 +2002,10 @@ async def get_common_folder_ids(
     server_url: str = "https://ax.email"
 ) -> Dict[str, Any]:
     """
-    Get IDs for common folders (Inbox, Sent, Drafts, etc.).
+    Get fresh common folder IDs with enhanced discovery and validation.
+
+    This function provides reliable, up-to-date folder IDs needed for other operations
+    like list_emails. Uses intelligent mapping to handle folder name variations.
 
     Args:
         email: User email for authentication
@@ -1604,51 +2013,232 @@ async def get_common_folder_ids(
         server_url: Axigen server URL (default: https://ax.email)
 
     Returns:
-        Dictionary with common folder names and their IDs
+        Dictionary with common folder names mapped to IDs plus discovery info
     """
-    result = await quick_request(
-        email, password, server_url,
-        "GET", "folders",
-        params={"type": "mails"}
-    )
+    result = await get_reliable_common_folders(email, password, server_url)
 
-    if "items" in result:
-        folders = result["items"]
-        common_folders = {}
-
-        for folder in folders:
-            name = folder.get("name", "")
-            folder_id = folder.get("id", "")
-            name_lower = name.lower()
-
-            # Map common folder names
-            if name_lower == "inbox":
-                common_folders["inbox"] = folder_id
-            elif name_lower == "sent":
-                common_folders["sent"] = folder_id
-            elif name_lower == "drafts":
-                common_folders["drafts"] = folder_id
-            elif name_lower == "trash":
-                common_folders["trash"] = folder_id
-            elif name_lower == "spam":
-                common_folders["spam"] = folder_id
-            elif name_lower == "archive":
-                common_folders["archive"] = folder_id
-            elif name_lower == "flagged":
-                common_folders["flagged"] = folder_id
-
+    if result["success"]:
+        folders = result["folders"]
         return {
             "success": True,
-            "folders": common_folders,
-            "message": f"Found {len(common_folders)} common folders. Use these IDs with list_emails.",
-            "example": f"To list inbox emails, use folder_id='{common_folders.get('inbox', 'not_found')}'"
+            "folders": folders,
+            "total_folders": result["total_folders"],
+            "discovered": result["discovered"],
+            "message": f"Found {len(folders)} common folders from {result['total_folders']} total folders",
+            "example": f"To list inbox emails: list_emails(folder_id='{folders.get('inbox', 'not_found')}')",
+            "available_folders": list(folders.keys())
         }
 
-    return {
-        "success": False,
-        "error": "Could not retrieve folders",
-        "data": result
+    return result
+
+# Unified Response Schema Helper
+
+def create_unified_response(
+    operation: str,
+    success: bool,
+    data: Any = None,
+    message: str = None,
+    error: str = None,
+    suggestion: str = None,
+    metadata: Dict[str, Any] = None
+) -> Dict[str, Any]:
+    """
+    Create a standardized response format for all operations.
+
+    Args:
+        operation: Name of the operation performed
+        success: Whether the operation succeeded
+        data: The main response data
+        message: Success message or description
+        error: Error message if failed
+        suggestion: Actionable suggestion for errors
+        metadata: Additional metadata about the operation
+
+    Returns:
+        Standardized response dictionary
+    """
+    response = {
+        "success": success,
+        "operation": operation,
+        "timestamp": "now"  # In real implementation, use actual timestamp
     }
+
+    if success:
+        if data is not None:
+            response["data"] = data
+        if message:
+            response["message"] = message
+    else:
+        if error:
+            response["error"] = error
+        if suggestion:
+            response["suggestion"] = suggestion
+
+    if metadata:
+        response["metadata"] = metadata
+
+    return response
+
+# Dry-Run and Preview Tools
+
+@mcp.tool()
+async def preview_folder_operation(
+    email: str,
+    password: str,
+    operation: str,
+    folder_id: str = None,
+    folder_name: str = None,
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    Preview folder operations without making changes.
+
+    Args:
+        email: User email for authentication
+        password: User password
+        operation: Operation to preview ('list', 'create', 'delete', etc.)
+        folder_id: Folder ID for operations requiring it
+        folder_name: Folder name for create operations
+        server_url: Axigen server URL (default: https://ax.email)
+
+    Returns:
+        Preview of what the operation would do
+    """
+    preview = {
+        "dry_run": True,
+        "operation": operation,
+        "would_execute": False
+    }
+
+    if operation == "list":
+        # Preview folder listing
+        try:
+            folders_result = await get_reliable_common_folders(email, password, server_url)
+            if folders_result["success"]:
+                preview.update({
+                    "success": True,
+                    "preview": f"Would list {folders_result['total_folders']} folders",
+                    "available_folders": list(folders_result["folders"].keys()),
+                    "recommendation": "Use list_folders to execute this operation"
+                })
+            else:
+                preview.update({
+                    "success": False,
+                    "error": "Cannot preview - folder access failed",
+                    "details": folders_result
+                })
+        except Exception as e:
+            preview.update({"success": False, "error": str(e)})
+
+    elif operation == "create" and folder_name:
+        # Preview folder creation
+        existing_folder = await auto_discover_folder_id(email, password, server_url, folder_name)
+        if existing_folder:
+            preview.update({
+                "success": False,
+                "preview": f"Would NOT create folder '{folder_name}' - already exists",
+                "existing_id": existing_folder,
+                "recommendation": "Choose a different name or use existing folder"
+            })
+        else:
+            preview.update({
+                "success": True,
+                "preview": f"Would create new folder '{folder_name}'",
+                "recommendation": "Use create_folder to execute this operation"
+            })
+
+    elif operation == "delete" and folder_id:
+        # Preview folder deletion
+        validation = await validate_folder_id(email, password, server_url, folder_id)
+        if validation["valid"]:
+            preview.update({
+                "success": True,
+                "preview": f"Would delete folder '{validation['name']}' (ID: {folder_id})",
+                "warning": "This action cannot be undone",
+                "recommendation": "Use delete_folder to execute this operation"
+            })
+        else:
+            preview.update({
+                "success": False,
+                "preview": "Cannot delete - folder not found",
+                "error": validation["error"]
+            })
+
+    else:
+        preview.update({
+            "success": False,
+            "error": "Unsupported operation or missing parameters",
+            "supported_operations": ["list", "create", "delete"]
+        })
+
+    return preview
+
+@mcp.tool()
+async def validate_operation_requirements(
+    operation: str,
+    parameters: Dict[str, Any],
+    email: str,
+    password: str,
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    Validate all requirements for an operation before execution.
+
+    Args:
+        operation: Operation name to validate
+        parameters: Parameters that would be passed to the operation
+        email: User email for authentication
+        password: User password
+        server_url: Axigen server URL (default: https://ax.email)
+
+    Returns:
+        Validation results with recommendations
+    """
+    validation = {
+        "operation": operation,
+        "valid": True,
+        "issues": [],
+        "recommendations": [],
+        "can_proceed": True
+    }
+
+    # Validate common parameters
+    if "mail_id" in parameters:
+        mail_validation = await validate_mail_id(email, password, server_url, parameters["mail_id"])
+        if not mail_validation["valid"]:
+            validation["valid"] = False
+            validation["issues"].append(f"Invalid mail_id: {mail_validation['error']}")
+            validation["recommendations"].append(mail_validation.get("suggestion", "Verify mail_id"))
+
+    if "folder_id" in parameters:
+        folder_validation = await validate_folder_id(email, password, server_url, parameters["folder_id"])
+        if not folder_validation["valid"]:
+            validation["valid"] = False
+            validation["issues"].append(f"Invalid folder_id: {folder_validation['error']}")
+            validation["recommendations"].append(folder_validation.get("suggestion", "Verify folder_id"))
+
+    if "label_id" in parameters:
+        label_valid = await validate_label_exists(email, password, server_url, parameters["label_id"])
+        if not label_valid:
+            validation["valid"] = False
+            validation["issues"].append(f"Invalid label_id: {parameters['label_id']}")
+            validation["recommendations"].append("Use list_labels to get valid label IDs")
+
+    # Operation-specific validations
+    if operation == "list_emails":
+        if "folder_id" not in parameters:
+            validation["valid"] = False
+            validation["issues"].append("folder_id is required for list_emails")
+            validation["recommendations"].append("Use get_common_folder_ids to discover folder IDs")
+
+    validation["can_proceed"] = validation["valid"] and len(validation["issues"]) == 0
+
+    if validation["can_proceed"]:
+        validation["message"] = f"All requirements satisfied for {operation}"
+    else:
+        validation["message"] = f"Requirements not met for {operation} - fix issues before proceeding"
+
+    return validation
 
 if __name__ == "__main__":
     mcp.run()
