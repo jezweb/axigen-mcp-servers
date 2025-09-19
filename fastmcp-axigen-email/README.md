@@ -6,7 +6,7 @@ MCP server for Axigen email operations, providing comprehensive email management
 
 ## Features
 
-This server provides 35 working tools for email operations on ax.email with enhanced reliability features:
+This server provides 47 working tools for email operations on ax.email with enhanced reliability features:
 
 ### Email Reading & Search
 - `list_emails` - List emails with pagination and sorting (**requires folder_id**)
@@ -16,11 +16,11 @@ This server provides 35 working tools for email operations on ax.email with enha
 - `get_email_headers` - Get email headers
 - `get_email_source` - Get raw email source (suitable for saving as .eml file)
 
-### Email Composition & Sending
-- `create_draft` - Create a new draft email
-- `update_draft` - Replace an existing draft (complete replacement via PUT)
+### Email Composition & Sending (Enhanced)
+- `create_draft` - **Enhanced** draft creation with validation and lifecycle tracking
+- `update_draft` - **Enhanced** draft replacement with validation and safety checks
 - `send_email` - Send a new email directly
-- `send_draft` - Send an existing draft
+- `send_draft` - **Enhanced** draft sending with idempotent behavior and validation
 - `schedule_send_email` - Schedule an email to be sent at a specific time
 - `schedule_send_draft` - Schedule an existing draft to be sent
 - `cancel_scheduled_send` - Cancel a scheduled email send
@@ -55,20 +55,36 @@ This server provides 35 working tools for email operations on ax.email with enha
 ### 🚀 **Bulk & Efficiency Operations**
 - `bulk_get_emails` - 🆕 **Retrieve multiple emails** efficiently with configurable detail levels
 - `batch_email_search` - 🆕 **Execute multiple search queries** in one operation
+- `bulk_create_drafts` - 🆕 **Create multiple drafts** from templates with validation
+- `batch_send_drafts` - 🆕 **Send multiple drafts** efficiently with per-draft tracking
 
 ### 🔍 **Reliability & Validation Tools**
 - `get_common_folder_ids` - **Enhanced discovery** with intelligent folder mapping
 - `preview_folder_operation` - 🆕 **Dry-run mode** for folder operations
+- `preview_draft_operation` - 🆕 **Dry-run mode** for draft operations with recipient validation
 - `validate_operation_requirements` - 🆕 **Pre-validate** operation parameters
 
-**🎯 Smart Workflows & Reliability Features:**
+### 🎨 **Template & Workflow Tools**
+- `create_draft_template` - 🆕 **Create reusable templates** with variable placeholders
+- `guided_draft_workflow` - 🆕 **Step-by-step workflows** (create→send, update→send)
+- `list_current_drafts_enhanced` - 🆕 **Enhanced draft listing** with send previews
+
+### 📈 **Auditing & Traceability**
+- `get_draft_lifecycle_history` - 🆕 **Track draft lifecycle** from creation to delivery
+- `audit_draft_operations` - 🆕 **Audit recent operations** for accountability
+- `get_drafts_folder_info` - 🆕 **Draft folder discovery** with metadata
+
+**🎯 Smart Draft/Send Workflows:**
+- **Stable ID Tracking**: Consistent draft_id, mail_id across all operations
+- **Lifecycle Management**: Clear is_draft, is_sent, status tracking
 - **Auto-Discovery**: Folder/label IDs automatically discovered and validated
-- **Intelligent Fallbacks**: Headers endpoint fallback to source extraction
-- **Bulk Operations**: Efficient batch processing for multiple emails/searches
-- **Idempotent Design**: All operations safe to repeat without errors
-- **Dry-Run Mode**: Preview operations before execution
-- **Enhanced Error Handling**: Actionable error messages with suggestions
-- **Standardized Responses**: Consistent response format across all operations
+- **Idempotent Operations**: Safe to repeat without side effects
+- **Recipient Validation**: Pre-validate email formats before creation/sending
+- **Template System**: Reusable templates with variable substitution
+- **Dry-Run Capabilities**: Preview all operations before execution
+- **Bulk Processing**: Efficient multi-draft operations with per-item tracking
+- **Audit Trails**: Complete lifecycle and operation history
+- **Guided Workflows**: Step-by-step create→send automation
 
 ## Installation
 
@@ -204,6 +220,133 @@ await use_tool("cancel_scheduled_send", {
   password: "password",
   mail_id: "scheduled_mail_id"
 });
+```
+
+### 🎨 **Enhanced Draft/Send Workflows**
+```javascript
+// 🎯 RECOMMENDED: Dry-run before creating
+await use_tool("preview_draft_operation", {
+  email: "user@example.com",
+  password: "password",
+  operation: "create",
+  to: "recipient@example.com",
+  subject: "Test Draft"
+});
+
+// 🚀 Create draft with enhanced tracking
+await use_tool("create_draft", {
+  email: "user@example.com",
+  password: "password",
+  to: "recipient@example.com",
+  subject: "Enhanced Draft",
+  body_text: "This draft has lifecycle tracking",
+  validate_recipients: true  // Pre-validate email formats
+});
+// Returns: {draft_id, lifecycle: {is_draft: true, status: "draft"}, ...}
+
+// 🔍 Preview send before executing
+await use_tool("preview_draft_operation", {
+  email: "user@example.com",
+  password: "password",
+  operation: "send",
+  draft_id: "draft_123"
+});
+
+// 🚀 Send with idempotent behavior
+await use_tool("send_draft", {
+  email: "user@example.com",
+  password: "password",
+  draft_id: "draft_123",
+  validate_draft: true,  // Check draft exists
+  idempotent: true       // Safe if already sent
+});
+// Returns: {mail_id, processing_id, lifecycle: {is_sent: true}, ...}
+
+// 📈 Track complete lifecycle
+await use_tool("get_draft_lifecycle_history", {
+  email: "user@example.com",
+  password: "password",
+  draft_id: "draft_123",
+  include_content_changes: true
+});
+```
+
+### 🚀 **Bulk Operations & Templates**
+```javascript
+// Create reusable template
+await use_tool("create_draft_template", {
+  template_name: "meeting_invite",
+  to: "{{recipient_email}}",
+  subject: "{{meeting_type}} - {{date}}",
+  body_text: "Hi {{name}},\n\nYou're invited to {{meeting_type}} on {{date}}.",
+  variables: ["recipient_email", "meeting_type", "date", "name"]
+});
+
+// Bulk create drafts from templates
+await use_tool("bulk_create_drafts", {
+  email: "user@example.com",
+  password: "password",
+  draft_templates: [
+    {
+      to: "alice@example.com",
+      subject: "Team Meeting - Monday",
+      body_text: "Hi Alice, You're invited to Team Meeting on Monday."
+    },
+    {
+      to: "bob@example.com",
+      subject: "Project Review - Tuesday",
+      body_text: "Hi Bob, You're invited to Project Review on Tuesday."
+    }
+  ],
+  validate_all: true,  // Validate before creating any
+  max_concurrent: 3
+});
+// Returns: {successful: 2, drafts: {template_1: {draft_id: "..."}, ...}}
+
+// Batch send multiple drafts
+await use_tool("batch_send_drafts", {
+  email: "user@example.com",
+  password: "password",
+  draft_ids: ["draft_123", "draft_124", "draft_125"],
+  validate_drafts: true,
+  max_concurrent: 3
+});
+// Returns: {successful: 3, sent_emails: {draft_123: {mail_id: "..."}, ...}}
+```
+
+### 🔍 **Guided Workflows & Auditing**
+```javascript
+// Step-by-step guided workflow with dry-run
+await use_tool("guided_draft_workflow", {
+  email: "user@example.com",
+  password: "password",
+  workflow_type: "create_send",
+  parameters: {
+    to: "recipient@example.com",
+    subject: "Guided Workflow Test",
+    body_text: "This email was created and sent via guided workflow"
+  },
+  dry_run: true  // Preview all steps first
+});
+
+// Execute the workflow
+await use_tool("guided_draft_workflow", {
+  email: "user@example.com",
+  password: "password",
+  workflow_type: "create_send",
+  parameters: {/* same as above */},
+  dry_run: false  // Actually execute
+});
+// Returns: step-by-step execution with results
+
+// Audit recent draft operations
+await use_tool("audit_draft_operations", {
+  email: "user@example.com",
+  password: "password",
+  time_range_hours: 24,
+  operation_type: "create"  // Filter by operation type
+});
+// Returns: comprehensive audit report with statistics
 ```
 
 ## Search Query Syntax
