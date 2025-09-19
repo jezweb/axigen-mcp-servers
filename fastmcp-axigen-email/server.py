@@ -478,151 +478,149 @@ async def update_draft(
     return result
 
 # Scheduled Send Operations
-# Note: Scheduled send operations do not work on ax.email (404 errors)
-# They may work on full Axigen installations with advanced features enabled
-# Keeping code for reference.
 
-# @mcp.tool()
-# async def schedule_send_email(
-#     email: str,
-#     password: str,
-#     to: str,
-#     subject: str,
-#     send_time: str,
-#     body_text: Optional[str] = None,
-#     body_html: Optional[str] = None,
-#     cc: Optional[str] = None,
-#     bcc: Optional[str] = None,
-#     reply_to: Optional[str] = None,
-#     importance: Optional[str] = "normal",
-#     server_url: str = "https://ax.email"
-# ) -> Dict[str, Any]:
-#     """
-#     Schedule an email to be sent at a specific time.
-#
-#     Args:
-#         email: User email for authentication
-#         password: User password
-#         to: Recipient email address(es), comma-separated
-#         subject: Email subject
-#         send_time: When to send the email (ISO 8601 format, e.g., "2024-12-25T09:00:00Z")
-#         body_text: Plain text body (optional)
-#         body_html: HTML body (optional)
-#         cc: CC recipients, comma-separated (optional)
-#         bcc: BCC recipients, comma-separated (optional)
-#         reply_to: Reply-To address (optional)
-#         importance: Email importance - "low", "normal", "high" (default: "normal")
-#         server_url: Axigen server URL (default: https://ax.email)
-#
-#     Returns:
-#         Scheduled send details including scheduled ID
-#     """
-#     email_data = {
-#         "to": to,
-#         "subject": subject,
-#         "sendTime": send_time,
-#         "importance": importance
-#     }
-#
-#     if body_text:
-#         email_data["bodyText"] = body_text
-#     if body_html:
-#         email_data["bodyHtml"] = body_html
-#     if cc:
-#         email_data["cc"] = cc
-#     if bcc:
-#         email_data["bcc"] = bcc
-#     if reply_to:
-#         email_data["replyTo"] = reply_to
-#
-#     result = await quick_request(
-#         email, password, server_url,
-#         "POST", "mails/scheduled",
-#         data=email_data
-#     )
-#
-#     if result.get("id"):
-#         return {
-#             "success": True,
-#             "message": f"Email scheduled for {send_time}",
-#             "scheduled_id": result["id"],
-#             "data": result
-#         }
-#
-#     return result
+async def schedule_send_email(
+    email: str,
+    password: str,
+    to: str,
+    subject: str,
+    delivery_time: int,
+    body_text: Optional[str] = None,
+    body_html: Optional[str] = None,
+    cc: Optional[str] = None,
+    bcc: Optional[str] = None,
+    reply_to: Optional[str] = None,
+    importance: Optional[str] = "normal",
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    Schedule an email to be sent at a specific time.
 
-# @mcp.tool()
-# async def schedule_send_draft(
-#     email: str,
-#     password: str,
-#     draft_id: str,
-#     send_time: str,
-#     server_url: str = "https://ax.email"
-# ) -> Dict[str, Any]:
-#     """
-#     Schedule an existing draft to be sent at a specific time.
-#
-#     Args:
-#         email: User email for authentication
-#         password: User password
-#         draft_id: The draft email ID to schedule
-#         send_time: When to send the draft (ISO 8601 format, e.g., "2024-12-25T09:00:00Z")
-#         server_url: Axigen server URL (default: https://ax.email)
-#
-#     Returns:
-#         Scheduled send details
-#     """
-#     schedule_data = {
-#         "sendTime": send_time
-#     }
-#
-#     result = await quick_request(
-#         email, password, server_url,
-#         "POST", f"drafts/{draft_id}/scheduled",
-#         data=schedule_data
-#     )
-#
-#     if result.get("id"):
-#         return {
-#             "success": True,
-#             "message": f"Draft scheduled for {send_time}",
-#             "scheduled_id": result["id"],
-#             "data": result
-#         }
-#
-#     return result
+    Args:
+        email: User email for authentication
+        password: User password
+        to: Recipient email address(es), comma-separated
+        subject: Email subject
+        delivery_time: When to send the email (unix timestamp in seconds)
+        body_text: Plain text body (optional)
+        body_html: HTML body (optional)
+        cc: CC recipients, comma-separated (optional)
+        bcc: BCC recipients, comma-separated (optional)
+        reply_to: Reply-To address (optional)
+        importance: Email importance - "low", "normal", "high" (default: "normal")
+        server_url: Axigen server URL (default: https://ax.email)
 
-# @mcp.tool()
-# async def cancel_scheduled_send(
-#     email: str,
-#     password: str,
-#     scheduled_id: str,
-#     server_url: str = "https://ax.email"
-# ) -> Dict[str, Any]:
-#     """
-#     Cancel a scheduled email send.
-#
-#     Args:
-#         email: User email for authentication
-#         password: User password
-#         scheduled_id: The scheduled send ID to cancel
-#         server_url: Axigen server URL (default: https://ax.email)
-#
-#     Returns:
-#         Cancellation status
-#     """
-#     result = await quick_request(
-#         email, password, server_url,
-#         "DELETE", f"mails/scheduled/{scheduled_id}"
-#     )
-#
-#     if result.get("success"):
-#         return {
-#             "success": True,
-#             "message": "Scheduled send cancelled successfully"
-#         }
-#
-#     return result
+    Returns:
+        Scheduled send details including mail ID
+    """
+    email_data = {
+        "to": to,
+        "subject": subject,
+        "deliveryTime": delivery_time,
+        "importance": importance
+    }
+
+    if body_text:
+        email_data["bodyText"] = body_text
+    if body_html:
+        email_data["bodyHtml"] = body_html
+    if cc:
+        email_data["cc"] = cc
+    if bcc:
+        email_data["bcc"] = bcc
+    if reply_to:
+        email_data["replyTo"] = reply_to
+
+    result = await quick_request(
+        email, password, server_url,
+        "POST", "mails/send/schedule",
+        data=email_data
+    )
+
+    if result.get("mailId"):
+        return {
+            "success": True,
+            "message": f"Email scheduled for delivery",
+            "mail_id": result["mailId"],
+            "data": result
+        }
+
+    return result
+
+@mcp.tool()
+async def schedule_send_draft(
+    email: str,
+    password: str,
+    draft_id: str,
+    delivery_time: int,
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    Schedule an existing draft to be sent at a specific time.
+
+    Args:
+        email: User email for authentication
+        password: User password
+        draft_id: The draft email ID to schedule
+        delivery_time: When to send the draft (unix timestamp in seconds)
+        server_url: Axigen server URL (default: https://ax.email)
+
+    Returns:
+        Scheduled send details
+    """
+    schedule_data = {
+        "deliveryTime": delivery_time
+    }
+
+    result = await quick_request(
+        email, password, server_url,
+        "POST", f"drafts/{draft_id}/send/schedule",
+        data=schedule_data
+    )
+
+    if result.get("mailId"):
+        return {
+            "success": True,
+            "message": f"Draft scheduled for delivery",
+            "mail_id": result["mailId"],
+            "data": result
+        }
+
+    return result
+
+@mcp.tool()
+async def cancel_scheduled_send(
+    email: str,
+    password: str,
+    mail_id: str,
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    Cancel a scheduled email send.
+
+    Args:
+        email: User email for authentication
+        password: User password
+        mail_id: The scheduled email ID to cancel
+        server_url: Axigen server URL (default: https://ax.email)
+
+    Returns:
+        Cancellation status with draft mail ID
+    """
+    result = await quick_request(
+        email, password, server_url,
+        "DELETE", f"mails/send/schedule/{mail_id}"
+    )
+
+    if result.get("mailId"):
+        return {
+            "success": True,
+            "message": "Scheduled send cancelled successfully",
+            "draft_id": result["mailId"],
+            "data": result
+        }
+
+    return result
 
 # Note: undo_send is not available on ax.email (404 errors)
 # This may work on full Axigen installations with advanced features enabled
@@ -836,274 +834,254 @@ async def mark_as_spam(
 # async def mark_as_not_spam(...)
 
 # Label Management Tools
-# Note: Label operations do not work on ax.email (400 Bad Parameter errors)
-# They may work on full Axigen installations. Keeping code for reference.
 
-# @mcp.tool()
-# async def list_labels(
-#     email: str,
-#     password: str,
-#     server_url: str = "https://ax.email"
-# ) -> Dict[str, Any]:
-#     """
-#     List all available labels.
-#
-#     Args:
-#         email: User email for authentication
-#         password: User password
-#         server_url: Axigen server URL (default: https://ax.email)
-#
-#     Returns:
-#         List of all labels with their IDs, names, and colors
-#     """
-#     result = await quick_request(
-#         email, password, server_url,
-#         "GET", "labels"
-#     )
-#
-#     if result.get("items"):
-#         labels = result["items"]
-#         formatted = []
-#         for label in labels:
-#             name = label.get("name", "Unknown")
-#             label_id = label.get("id", "")
-#             color = label.get("color", "")
-#             formatted.append(f"- {name} (ID: {label_id}, Color: {color})")
-#
-#         return {
-#             "success": True,
-#             "labels": labels,
-#             "formatted": "\n".join(formatted) if formatted else "No labels found",
-#             "message": "Use these label IDs with add_label_to_email and remove_label_from_email"
-#         }
-#
-#     return result
+async def list_labels(
+    email: str,
+    password: str,
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    List all available labels.
 
-# @mcp.tool()
-# async def get_label(
-#     email: str,
-#     password: str,
-#     label_id: str,
-#     server_url: str = "https://ax.email"
-# ) -> Dict[str, Any]:
-#     """
-#     Get details of a specific label.
-#
-#     Args:
-#         email: User email for authentication
-#         password: User password
-#         label_id: The label ID to retrieve
-#         server_url: Axigen server URL (default: https://ax.email)
-#
-#     Returns:
-#         Label details including name and color
-#     """
-#     return await quick_request(
-#         email, password, server_url,
-#         "GET", f"labels/{label_id}"
-#     )
+    Args:
+        email: User email for authentication
+        password: User password
+        server_url: Axigen server URL (default: https://ax.email)
 
-# @mcp.tool()
-# async def create_label(
-#     email: str,
-#     password: str,
-#     name: str,
-#     color: Optional[str] = None,
-#     server_url: str = "https://ax.email"
-# ) -> Dict[str, Any]:
-#     """
-#     Create a new label.
-#
-#     Args:
-#         email: User email for authentication
-#         password: User password
-#         name: Label name
-#         color: Label color in hex format (e.g., "#FF0000") (optional)
-#         server_url: Axigen server URL (default: https://ax.email)
-#
-#     Returns:
-#         Created label details with ID
-#     """
-#     label_data = {
-#         "name": name
-#     }
-#
-#     if color:
-#         label_data["color"] = color
-#
-#     result = await quick_request(
-#         email, password, server_url,
-#         "POST", "labels",
-#         data=label_data
-#     )
-#
-#     if result.get("id"):
-#         return {
-#             "success": True,
-#             "message": f"Label '{name}' created successfully",
-#             "label_id": result["id"],
-#             "data": result
-#         }
-#
-#     return result
+    Returns:
+        List of all labels with their IDs and names
+    """
+    result = await quick_request(
+        email, password, server_url,
+        "GET", "labels"
+    )
 
-# @mcp.tool()
-# async def update_label(
-#     email: str,
-#     password: str,
-#     label_id: str,
-#     name: Optional[str] = None,
-#     color: Optional[str] = None,
-#     server_url: str = "https://ax.email"
-# ) -> Dict[str, Any]:
-#     """
-#     Update an existing label.
-#
-#     Args:
-#         email: User email for authentication
-#         password: User password
-#         label_id: The label ID to update
-#         name: New label name (optional)
-#         color: New label color in hex format (optional)
-#         server_url: Axigen server URL (default: https://ax.email)
-#
-#     Returns:
-#         Updated label details
-#     """
-#     update_data = {}
-#
-#     if name:
-#         update_data["name"] = name
-#     if color:
-#         update_data["color"] = color
-#
-#     if not update_data:
-#         return {
-#             "success": False,
-#             "error": "No updates provided"
-#         }
-#
-#     result = await quick_request(
-#         email, password, server_url,
-#         "PATCH", f"labels/{label_id}",
-#         data=update_data
-#     )
-#
-#     if result.get("id"):
-#         return {
-#             "success": True,
-#             "message": "Label updated successfully",
-#             "data": result
-#         }
-#
-#     return result
+    if result.get("items"):
+        labels = result["items"]
+        formatted = []
+        for label in labels:
+            name = label.get("name", "Unknown")
+            label_id = label.get("id", "")
+            formatted.append(f"- {name} (ID: {label_id})")
 
-# @mcp.tool()
-# async def delete_label(
-#     email: str,
-#     password: str,
-#     label_id: str,
-#     server_url: str = "https://ax.email"
-# ) -> Dict[str, Any]:
-#     """
-#     Delete a label.
-#
-#     Args:
-#         email: User email for authentication
-#         password: User password
-#         label_id: The label ID to delete
-#         server_url: Axigen server URL (default: https://ax.email)
-#
-#     Returns:
-#         Deletion status
-#     """
-#     result = await quick_request(
-#         email, password, server_url,
-#         "DELETE", f"labels/{label_id}"
-#     )
-#
-#     if result.get("success"):
-#         return {
-#             "success": True,
-#             "message": "Label deleted successfully"
-#         }
-#
-#     return result
+        return {
+            "success": True,
+            "labels": labels,
+            "formatted": "\n".join(formatted) if formatted else "No labels found",
+            "message": "Use these label IDs with add_label_to_email and remove_label_from_email"
+        }
 
-# Email Label Operations (also not working on ax.email)
+    return result
 
-# @mcp.tool()
-# async def add_label_to_email(
-#     email: str,
-#     password: str,
-#     mail_id: str,
-#     label_id: str,
-#     server_url: str = "https://ax.email"
-# ) -> Dict[str, Any]:
-#     """
-#     Add a label to an email.
-#
-#     Args:
-#         email: User email for authentication
-#         password: User password
-#         mail_id: The email ID
-#         label_id: The label ID to add (use list_labels to find available IDs)
-#         server_url: Axigen server URL (default: https://ax.email)
-#
-#     Returns:
-#         Operation status
-#     """
-#     label_data = {
-#         "labelId": label_id
-#     }
-#
-#     result = await quick_request(
-#         email, password, server_url,
-#         "POST", f"mails/{mail_id}/labels",
-#         data=label_data
-#     )
-#
-#     if result.get("success"):
-#         return {
-#             "success": True,
-#             "message": f"Label {label_id} added to email successfully"
-#         }
-#
-#     return result
+@mcp.tool()
+async def get_label(
+    email: str,
+    password: str,
+    label_id: str,
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    Get details of a specific label.
 
-# @mcp.tool()
-# async def remove_label_from_email(
-#     email: str,
-#     password: str,
-#     mail_id: str,
-#     label_id: str,
-#     server_url: str = "https://ax.email"
-# ) -> Dict[str, Any]:
-#     """
-#     Remove a label from an email.
-#
-#     Args:
-#         email: User email for authentication
-#         password: User password
-#         mail_id: The email ID
-#         label_id: The label ID to remove
-#         server_url: Axigen server URL (default: https://ax.email)
-#
-#     Returns:
-#         Operation status
-#     """
-#     result = await quick_request(
-#         email, password, server_url,
-#         "DELETE", f"mails/{mail_id}/labels/{label_id}"
-#     )
-#
-#     if result.get("success"):
-#         return {
-#             "success": True,
-#             "message": f"Label {label_id} removed from email successfully"
-#         }
-#
-#     return result
+    Args:
+        email: User email for authentication
+        password: User password
+        label_id: The label ID to retrieve
+        server_url: Axigen server URL (default: https://ax.email)
+
+    Returns:
+        Label details including name
+    """
+    return await quick_request(
+        email, password, server_url,
+        "GET", f"labels/{label_id}"
+    )
+
+@mcp.tool()
+async def create_label(
+    email: str,
+    password: str,
+    name: str,
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    Create a new label.
+
+    Args:
+        email: User email for authentication
+        password: User password
+        name: Label name (max 128 characters)
+        server_url: Axigen server URL (default: https://ax.email)
+
+    Returns:
+        Created label details with ID
+    """
+    label_data = {
+        "name": name
+    }
+
+    result = await quick_request(
+        email, password, server_url,
+        "POST", "labels",
+        data=label_data
+    )
+
+    if result.get("id"):
+        return {
+            "success": True,
+            "message": f"Label '{name}' created successfully",
+            "label_id": result["id"],
+            "data": result
+        }
+
+    return result
+
+@mcp.tool()
+async def update_label(
+    email: str,
+    password: str,
+    label_id: str,
+    name: str,
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    Update an existing label.
+
+    Args:
+        email: User email for authentication
+        password: User password
+        label_id: The label ID to update
+        name: New label name (max 128 characters)
+        server_url: Axigen server URL (default: https://ax.email)
+
+    Returns:
+        Updated label details
+    """
+    update_data = {
+        "name": name
+    }
+
+    result = await quick_request(
+        email, password, server_url,
+        "PATCH", f"labels/{label_id}",
+        data=update_data
+    )
+
+    if result.get("id"):
+        return {
+            "success": True,
+            "message": "Label updated successfully",
+            "data": result
+        }
+
+    return result
+
+@mcp.tool()
+async def delete_label(
+    email: str,
+    password: str,
+    label_id: str,
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    Delete a label.
+
+    Args:
+        email: User email for authentication
+        password: User password
+        label_id: The label ID to delete
+        server_url: Axigen server URL (default: https://ax.email)
+
+    Returns:
+        Deletion status
+    """
+    result = await quick_request(
+        email, password, server_url,
+        "DELETE", f"labels/{label_id}"
+    )
+
+    if result.get("success"):
+        return {
+            "success": True,
+            "message": "Label deleted successfully"
+        }
+
+    return result
+
+# Email Label Operations
+
+@mcp.tool()
+async def add_label_to_email(
+    email: str,
+    password: str,
+    mail_id: str,
+    label_id: str,
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    Add a label to an email.
+
+    Args:
+        email: User email for authentication
+        password: User password
+        mail_id: The email ID
+        label_id: The label ID to add (use list_labels to find available IDs)
+        server_url: Axigen server URL (default: https://ax.email)
+
+    Returns:
+        Operation status
+    """
+    label_data = {
+        "labelId": label_id
+    }
+
+    result = await quick_request(
+        email, password, server_url,
+        "POST", f"mails/{mail_id}/labels",
+        data=label_data
+    )
+
+    if result.get("success"):
+        return {
+            "success": True,
+            "message": f"Label {label_id} added to email successfully"
+        }
+
+    return result
+
+@mcp.tool()
+async def remove_label_from_email(
+    email: str,
+    password: str,
+    mail_id: str,
+    label_id: str,
+    server_url: str = "https://ax.email"
+) -> Dict[str, Any]:
+    """
+    Remove a label from an email.
+
+    Args:
+        email: User email for authentication
+        password: User password
+        mail_id: The email ID
+        label_id: The label ID to remove
+        server_url: Axigen server URL (default: https://ax.email)
+
+    Returns:
+        Operation status
+    """
+    result = await quick_request(
+        email, password, server_url,
+        "DELETE", f"mails/{mail_id}/labels/{label_id}"
+    )
+
+    if result.get("success"):
+        return {
+            "success": True,
+            "message": f"Label {label_id} removed from email successfully"
+        }
+
+    return result
 
 @mcp.tool()
 async def get_email_source(

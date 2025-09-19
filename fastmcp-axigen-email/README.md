@@ -6,7 +6,7 @@ MCP server for Axigen email operations, providing comprehensive email management
 
 ## Features
 
-This server provides 21 working tools for email operations on ax.email:
+This server provides 28 working tools for email operations on ax.email:
 
 ### Email Reading & Search
 - `list_emails` - List emails with pagination and sorting (**requires folder_id**)
@@ -21,6 +21,9 @@ This server provides 21 working tools for email operations on ax.email:
 - `update_draft` - Replace an existing draft (complete replacement via PUT)
 - `send_email` - Send a new email directly
 - `send_draft` - Send an existing draft
+- `schedule_send_email` - Schedule an email to be sent at a specific time
+- `schedule_send_draft` - Schedule an existing draft to be sent
+- `cancel_scheduled_send` - Cancel a scheduled email send
 
 ### Email Management
 - `delete_email` - Delete email (trash or permanent)
@@ -37,6 +40,15 @@ This server provides 21 working tools for email operations on ax.email:
 - `update_folder` - Rename/update folder (uses PATCH method)
 - `delete_folder` - Delete empty folder
 - `get_common_folder_ids` - Helper to get IDs for Inbox, Sent, Drafts, etc.
+
+### Labels
+- `list_labels` - List all available labels
+- `get_label` - Get details of a specific label
+- `create_label` - Create a new label
+- `update_label` - Update an existing label
+- `delete_label` - Delete a label
+- `add_label_to_email` - Add a label to an email
+- `remove_label_from_email` - Remove a label from an email
 
 ## Installation
 
@@ -117,6 +129,51 @@ await use_tool("move_email", {
 });
 ```
 
+### Use Labels
+```javascript
+// List available labels
+await use_tool("list_labels", {
+  email: "user@example.com",
+  password: "password"
+});
+
+// Create a new label
+await use_tool("create_label", {
+  email: "user@example.com",
+  password: "password",
+  name: "Important"
+});
+
+// Add label to email
+await use_tool("add_label_to_email", {
+  email: "user@example.com",
+  password: "password",
+  mail_id: "12345",
+  label_id: "label_123"
+});
+```
+
+### Schedule Emails
+```javascript
+// Schedule an email (delivery_time is unix timestamp)
+const deliveryTime = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+await use_tool("schedule_send_email", {
+  email: "user@example.com",
+  password: "password",
+  to: "recipient@example.com",
+  subject: "Scheduled Message",
+  body_text: "This will be sent later",
+  delivery_time: deliveryTime
+});
+
+// Cancel scheduled send
+await use_tool("cancel_scheduled_send", {
+  email: "user@example.com",
+  password: "password",
+  mail_id: "scheduled_mail_id"
+});
+```
+
 ## Search Query Syntax
 
 Search uses field-based queries with the following structure:
@@ -166,15 +223,16 @@ When using with ax.email (the default server):
 - ✅ **Spam marking** works (moves to spam folder)
 - ✅ **Update draft** works via PUT (complete replacement)
 - ✅ **Folder update** works via PATCH method (rename folders)
+- ✅ **Label operations** work with correct API parameters (no color support)
+- ✅ **Scheduled send** works with correct endpoints and unix timestamps
 - ⚠️ **folder_id is required** for `list_emails` - use `get_common_folder_ids` first
 - ⚠️ **Move operations** use `destinationFolderId` internally (handled by the tool)
 - ⚠️ **Email bodies** are base64-encoded (automatically decoded by the tool)
+- ⚠️ **Scheduled send** requires unix timestamps, not ISO 8601 format
 - ❌ **Unmark spam** doesn't work - move from spam folder instead
 - ❌ **Flagged/attachment search** not supported
-- ❌ **Scheduled send** operations not available (404 errors)
 - ❌ **Undo send** not available
 - ❌ **Temporary attachments** not available
-- ❌ **Label operations** not working (400 Bad Parameter errors)
 - ❌ **Folder move** not available
 - ❌ **Message parts** endpoints return unexpected format
 
