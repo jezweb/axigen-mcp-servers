@@ -6,7 +6,7 @@ MCP server for Axigen email operations, providing comprehensive email management
 
 ## Features
 
-This server provides 47 working tools for email operations on ax.email with enhanced reliability features:
+This server provides 32 working tools for email operations on ax.email:
 
 ### Email Reading & Search
 - `list_emails` - List emails with pagination and sorting (**requires folder_id**)
@@ -14,13 +14,12 @@ This server provides 47 working tools for email operations on ax.email with enha
 - `get_email` - Get full email details
 - `get_email_body` - Get email body (automatically decodes base64)
 - `get_email_headers` - Get email headers
-- `get_email_source` - Get raw email source (suitable for saving as .eml file)
 
-### Email Composition & Sending (Enhanced)
-- `create_draft` - **Enhanced** draft creation with validation and lifecycle tracking
-- `update_draft` - **Enhanced** draft replacement with validation and safety checks
+### Email Composition & Sending
+- `create_draft` - Create draft emails with validation
+- `update_draft` - Update existing drafts
 - `send_email` - Send a new email directly
-- `send_draft` - **Enhanced** draft sending with idempotent behavior and validation
+- `send_draft` - Send existing drafts
 - `schedule_send_email` - Schedule an email to be sent at a specific time
 - `schedule_send_draft` - Schedule an existing draft to be sent
 - `cancel_scheduled_send` - Cancel a scheduled email send
@@ -33,58 +32,23 @@ This server provides 47 working tools for email operations on ax.email with enha
 - `mark_as_spam` - Mark email as spam (moves to spam folder)
 - ~~`mark_as_not_spam`~~ - Not supported on ax.email
 
-### Attachments & Folders
-- `get_email_attachments` - List email attachments
+### Folders
 - `list_folders` - List email folders with unread counts
 - `create_folder` - Create new email folder
 - `update_folder` - Rename/update folder (uses PATCH method)
 - `delete_folder` - Delete empty folder
 - `get_common_folder_ids` - Helper to get IDs for Inbox, Sent, Drafts, etc.
 
-### Labels (Enhanced with Smart Workflows)
+### Labels
 - `list_labels` - List all available labels
 - `get_label` - Get details of a specific label
 - `create_label` - Create a new label (returns new label ID)
 - `update_label` - Update an existing label
 - `delete_label` - Delete a label
-- `add_label_to_email` - Add a label to an email (**enhanced with validation**)
-- `remove_label_from_email` - Remove a label from an email (**idempotent**)
-- `add_label_by_name` - 🆕 **Smart labeling** - add by name, auto-creates if missing
-- `bulk_label_emails` - 🆕 **Bulk operations** - label multiple emails at once
+- `add_label_to_email` - Add a label to an email
+- `remove_label_from_email` - Remove a label from an email
+- `add_label_by_name` - Smart labeling - add by name, auto-creates if missing
 
-### 🚀 **Bulk & Efficiency Operations**
-- `bulk_get_emails` - 🆕 **Retrieve multiple emails** efficiently with configurable detail levels
-- `batch_email_search` - 🆕 **Execute multiple search queries** in one operation
-- `bulk_create_drafts` - 🆕 **Create multiple drafts** from templates with validation
-- `batch_send_drafts` - 🆕 **Send multiple drafts** efficiently with per-draft tracking
-
-### 🔍 **Reliability & Validation Tools**
-- `get_common_folder_ids` - **Enhanced discovery** with intelligent folder mapping
-- `preview_folder_operation` - 🆕 **Dry-run mode** for folder operations
-- `preview_draft_operation` - 🆕 **Dry-run mode** for draft operations with recipient validation
-- `validate_operation_requirements` - 🆕 **Pre-validate** operation parameters
-
-### 🎨 **Template & Workflow Tools**
-- `create_draft_template` - 🆕 **Create reusable templates** with variable placeholders
-- `guided_draft_workflow` - 🆕 **Step-by-step workflows** (create→send, update→send)
-- `list_current_drafts_enhanced` - 🆕 **Enhanced draft listing** with send previews
-
-### 📈 **Auditing & Traceability**
-- `get_draft_lifecycle_history` - 🆕 **Track draft lifecycle** from creation to delivery
-- `audit_draft_operations` - 🆕 **Audit recent operations** for accountability
-- `get_drafts_folder_info` - 🆕 **Draft folder discovery** with metadata
-
-**🎯 Smart Draft/Send Workflows:**
-- **Stable ID Tracking**: Consistent draft_id, mail_id across all operations
-- **Lifecycle Management**: Clear is_draft, is_sent, status tracking
-- **Auto-Discovery**: Folder/label IDs automatically discovered and validated
-- **Idempotent Operations**: Safe to repeat without side effects
-- **Recipient Validation**: Pre-validate email formats before creation/sending
-- **Template System**: Reusable templates with variable substitution
-- **Dry-Run Capabilities**: Preview all operations before execution
-- **Bulk Processing**: Efficient multi-draft operations with per-item tracking
-- **Audit Trails**: Complete lifecycle and operation history
-- **Guided Workflows**: Step-by-step create→send automation
 
 ## Installation
 
